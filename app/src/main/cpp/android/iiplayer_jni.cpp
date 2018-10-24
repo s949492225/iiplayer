@@ -1,0 +1,106 @@
+#include <stdint.h>//
+// Created by 宋林涛 on 2018/10/22.
+//
+
+#include "iiplayer_jni.h"
+#include "android_log.h"
+#include "../media/media_player.h"
+
+jfieldID get_player_field(JNIEnv *env) {
+    jclass jcs = env->FindClass("com/syiyi/player/IiMediaPlayer");
+    return env->GetFieldID(jcs, "mNativePlayer", "J");
+}
+
+media_player *get_media_player(JNIEnv *env, jobject obj) {
+    jfieldID jfd = get_player_field(env);
+    return reinterpret_cast<media_player *>(env->GetLongField(obj, jfd));
+}
+
+void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
+    //release old
+    media_player *old_player = get_media_player(env, obj);
+    if (old_player != NULL) {
+        delete old_player;
+    }
+
+    jfieldID jfd = get_player_field(env);
+    env->SetLongField(obj, jfd, reinterpret_cast<jlong>(player));
+}
+
+/**
+ * 在java层保存c class的指针引用
+ * @param env
+ * @param obj
+ */
+static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
+    media_player *player = new media_player();
+    set_media_player(env, obj, player);
+}
+
+static void JNICALL nativeOpen(JNIEnv *env, jobject obj, jstring url) {
+    const char *str_c = env->GetStringUTFChars(url, NULL);
+    char *new_str = strdup(str_c);
+    env->ReleaseStringUTFChars(url, str_c);
+
+    media_player *player = get_media_player(env, obj);
+    player->open(new_str);
+}
+
+static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
+    media_player *player = get_media_player(env, obj);
+    player->play();
+}
+
+//++ jni register ++//
+static JavaVM *g_jvm = NULL;
+static const JNINativeMethod g_methods[] = {
+        {"nativeInit", "()V",                   (void *) nativeInit},
+        {"nativeOpen", "(Ljava/lang/String;)V", (void *) nativeOpen},
+        {"nativePlay", "()V",                   (void *) nativePlay}
+};
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
+    JNIEnv *env = NULL;
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4) != JNI_OK) {
+        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:GetEnv failed\n");
+        return -1;
+    }
+
+    jclass cls = env->FindClass("com/syiyi/player/IiMediaPlayer");
+    int ret = env->RegisterNatives(cls, g_methods, sizeof(g_methods) / sizeof(g_methods[0]));
+    if (ret != JNI_OK) {
+        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR :RegisterNative failed\n");
+        return -1;
+    }
+
+    //for g_vim
+    g_jvm = vm;
+    return JNI_VERSION_1_4;
+}
+
+JNIEXPORT JavaVM *get_jni_jvm(void) {
+    return g_jvm;
+}
+
+JNIEXPORT JNIEnv *get_jni_env(void) {
+    JNIEnv *env = NULL;
+    if (g_jvm == NULL) {
+        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:get_jni_env g_jvm is null\n");
+        return NULL;
+    }
+    int status = g_jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4);
+    if (status != JNI_OK) {
+        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:get_jni_env GetEnv failed\n");
+        return NULL;
+    }
+    status = g_jvm->AttachCurrentThread(&env, NULL);
+    if (status != JNI_OK) {
+        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni",
+                            "ERROR:get_jni_env attach current thread failed\n");
+        return NULL;
+    }
+    return env;
+
+}
+
+
