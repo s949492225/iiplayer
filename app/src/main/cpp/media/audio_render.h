@@ -2,13 +2,13 @@
 // Created by 宋林涛 on 2018/9/28.
 //
 
-#ifndef VIDEODEMO_SAUDIO_H
-#define VIDEODEMO_SAUDIO_H
+#pragma once
 
 #include "status.h"
 #include <pthread.h>
 #include "frame_queue.h"
 #include <unistd.h>
+#include <assert.h>
 
 extern "C" {
 #include <SLES/OpenSLES.h>
@@ -22,8 +22,8 @@ extern "C" {
 class audio_render {
 public:
     status *playStatus = NULL;
-    int sampleRate = 0;
-    uint8_t *buffer = NULL;
+    int sample_rate = 0;
+    uint8_t *out_buffer = NULL;
     int data_size = 0;
     AVRational audio_timebase;
     frame_queue *audio_frame_queue;
@@ -31,7 +31,8 @@ public:
     double now_time;//当前frame时间
     double last_time; //上一次调用时间
     int max_frame_queue_size = 40;
-
+    int out_channel_nb;
+    SwrContext *swrCtr;
     pthread_t play_t;
     // 引擎接口
     SLObjectItf engineObject = NULL;
@@ -45,11 +46,14 @@ public:
     //pcm
     SLObjectItf pcmPlayerObject = NULL;
     SLPlayItf pcmPlayerPlay = NULL;
+    //voice
+    SLVolumeItf fdPlayerVolume = NULL;
+
 
     //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf buffer_queue = NULL;
 
-    audio_render(status *playStatus, int sampleRate, AVRational rational);
+    audio_render(status *playStatus, AVCodecContext *codecContext, AVRational timebase);
 
     ~audio_render();
 
@@ -59,11 +63,11 @@ public:
 
     void resume();
 
-    void create_opensles();
+    void create_player();
 
     int get_format_sample_rate(int sample_rate);
 
-    int resample_audio();
+    int get_pcm_data();
+
 };
 
-#endif //VIDEODEMO_SAUDIO_H

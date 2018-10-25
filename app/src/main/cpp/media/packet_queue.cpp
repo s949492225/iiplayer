@@ -19,30 +19,35 @@ packet_queue::~packet_queue() {
 
 int packet_queue::putPacket(AVPacket *packet) {
     pthread_mutex_lock(&mutexPacket);
+
     queuePacket.push(packet);
     pthread_cond_signal(&condPacket);
+
     pthread_mutex_unlock(&mutexPacket);
     return 0;
 }
 
 int packet_queue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mutexPacket);
+    int ret = -1;
     while (playStatus != NULL && !playStatus->exit) {
         if (queuePacket.size() > 0) {
             AVPacket *avPacket = queuePacket.front();
             if (av_packet_ref(packet, avPacket) == 0) {
                 queuePacket.pop();
+                ret = 0;
+                av_packet_free(&avPacket);
+                av_free(avPacket);
+                avPacket = NULL;
+                pthread_cond_signal(&condPacket);
             }
-            av_packet_free(&avPacket);
-            av_free(avPacket);
-            avPacket = NULL;
             break;
         } else {
             pthread_cond_wait(&condPacket, &mutexPacket);
         }
     }
     pthread_mutex_unlock(&mutexPacket);
-    return 0;
+    return ret;
 }
 
 int packet_queue::getQueueSize() {

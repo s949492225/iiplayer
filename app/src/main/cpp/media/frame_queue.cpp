@@ -17,8 +17,7 @@ frame_queue::~frame_queue() {
     pthread_cond_destroy(&condPacket);
 }
 
-int frame_queue::putFrame(AVFrame *packet)
-{
+int frame_queue::putFrame(AVFrame *packet) {
     pthread_mutex_lock(&mutexPacket);
     queuePacket.push(packet);
     pthread_cond_signal(&condPacket);
@@ -26,19 +25,27 @@ int frame_queue::putFrame(AVFrame *packet)
     return 0;
 }
 
-AVFrame *frame_queue::getFrame() {
+int frame_queue::getFrame(AVFrame *frame) {
     pthread_mutex_lock(&mutexPacket);
+    int ret = -1;
     while (playStatus != NULL && !playStatus->exit) {
         if (queuePacket.size() > 0) {
-            AVFrame *avPacket = queuePacket.front();
-            queuePacket.pop();
-            return avPacket;
+            AVFrame *avFrame = queuePacket.front();
+            if (av_frame_ref(frame, avFrame) == 0) {
+                queuePacket.pop();
+                ret = 0;
+                av_frame_free(&avFrame);
+                av_free(avFrame);
+                avFrame = NULL;
+                pthread_cond_signal(&condPacket);
+            }
+            break;
         } else {
             pthread_cond_wait(&condPacket, &mutexPacket);
         }
     }
     pthread_mutex_unlock(&mutexPacket);
-    return NULL;
+    return ret;
 }
 
 int frame_queue::getQueueSize() {

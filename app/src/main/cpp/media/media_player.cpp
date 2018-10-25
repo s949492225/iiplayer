@@ -43,13 +43,15 @@ void media_player::read_thread() {
             continue;
         }
         AVPacket *packet = av_packet_alloc();
-        if (av_read_frame(pFormatCtx, packet) >= 0) {
+        if (av_read_frame(pFormatCtx, packet) == 0) {
+            //音频
             if (packet->stream_index == audio_stream_index) {
                 while (play_status->audio_packet_queue->getQueueSize() >=
                        play_status->max_packet_queue_size) {
                     av_usleep(1000 * 5);
                 }
                 play_status->audio_packet_queue->putPacket(packet);
+                //视频
             } else {
                 av_packet_free(&packet);
                 av_free(packet);
@@ -58,6 +60,7 @@ void media_player::read_thread() {
             //播放完成
             av_packet_free(&packet);
             av_free(packet);
+            LOGD("文件读取结束");
             break;
         }
     }
@@ -106,7 +109,7 @@ void media_player::decode_audio() {
                 audio_frame->channels = av_get_channel_layout_nb_channels(
                         audio_frame->channel_layout);
             }
-            LOGD("audio decode time :%lld\n", audio_frame->pts)
+//            LOGD("audio decode time :%lld\n", audio_frame->pts)
             while (a_render->audio_frame_queue->getQueueSize() >= a_render->max_frame_queue_size) {
                 av_usleep(1000 * 5);
             }
@@ -118,7 +121,6 @@ void media_player::decode_audio() {
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
-            LOGD("播放完成\n");
         }
     }
 }
@@ -155,17 +157,18 @@ int media_player::prepare() {
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             //音频解码器
             if (i != -1) {
-                a_render = new audio_render(play_status, parameters->sample_rate,
+                get_codec_context(parameters, &audio_codec_ctx);
+
+                a_render = new audio_render(play_status, audio_codec_ctx,
                                             pFormatCtx->streams[i]->time_base);
                 audio_stream_index = i;
                 duration = static_cast<int>(pFormatCtx->duration / AV_TIME_BASE);
-                get_codec_context(parameters, &audio_codec_ctx);
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
+                get_codec_context(parameters, &video_codec_ctx);
                 video_stream_index = i;
                 video_timebase = pFormatCtx->streams[i]->time_base;
-                get_codec_context(parameters, &video_codec_ctx);
             }
         }
     }
