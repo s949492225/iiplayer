@@ -1,7 +1,9 @@
 package com.syiyi.player;
 
+@SuppressWarnings("WeakerAccess")
 public class IiMediaPlayer {
     private String url = null;
+    @SuppressWarnings("unused")
     private long mNativePlayer;
 
     static {
@@ -35,11 +37,29 @@ public class IiMediaPlayer {
         nativePlay();
     }
 
+    public void pause() {
+        nativePause();
+    }
+
+    public void resume() {
+        nativeResume();
+    }
+
+    public void stop() {
+        nativeStop();
+    }
+
     private native void nativeInit();
 
     private native void nativeOpen(String path);
 
     private native void nativePlay();
+
+    private native void nativePause();
+
+    private native void nativeResume();
+
+    private native void nativeStop();
 
 
 }

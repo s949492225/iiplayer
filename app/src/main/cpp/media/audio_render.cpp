@@ -4,45 +4,43 @@
 
 #include "audio_render.h"
 
-audio_render::audio_render(status *playStatus, AVCodecContext *codecContext,
-                           AVRational timebase) {
+audio_render::audio_render(status *playStatus, AVCodecContext *codecContext) {
     this->playStatus = playStatus;
     this->sample_rate = codecContext->sample_rate;
-    this->audio_timebase = timebase;
+    this->audio_timebase = codecContext->time_base;
     this->audio_frame_queue = new frame_queue(playStatus);
-    out_buffer = static_cast<uint8_t *>(av_malloc(static_cast<size_t>(44100 * 4)));
+    this->out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+    out_buffer = static_cast<uint8_t *>(av_malloc(static_cast<size_t>(SAMPLE_SIZE)));
+    init_swr(codecContext);
+}
 
-    //frame->16bit 44100 PCM 统一音频采样格式与采样率
+void audio_render::init_swr(AVCodecContext *pContext) {
     swrCtr = swr_alloc();
     swr_alloc_set_opts(swrCtr,
                        AV_CH_LAYOUT_STEREO,
                        AV_SAMPLE_FMT_S16,
-                       codecContext->sample_rate,
-                       codecContext->channel_layout,
-                       codecContext->sample_fmt,
-                       codecContext->sample_rate,
+                       pContext->sample_rate,
+                       pContext->channel_layout,
+                       pContext->sample_fmt,
+                       pContext->sample_rate,
                        NULL, NULL);
-    //初始化
     swr_init(swrCtr);
-    out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
 }
 
 void *play_thread(void *data) {
     LOGD("音频播放线程开始,tid:%i\n", gettid())
     audio_render *audio = static_cast<audio_render *>(data);
     audio->create_player();
-//    audio->resample_audio();
+    return NULL;
 }
 
 void audio_render::play() {
     pthread_create(&play_t, NULL, play_thread, this);
-//    play_thread(this);
 }
 
 
 int audio_render::get_pcm_data() {
     data_size = 0;
-//    FILE *fp_pcm = fopen("/sdcard/test.pcm", "wb");
     while (playStatus != NULL && !playStatus->exit) {
 
         if (audio_frame_queue->getQueueSize() == 0)//加载中
@@ -70,7 +68,7 @@ int audio_render::get_pcm_data() {
                 frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
             }
 
-            int nb = swr_convert(swrCtr, &out_buffer, 44100 * 4,
+            int nb = swr_convert(swrCtr, &out_buffer, SAMPLE_SIZE,
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             data_size = nb * out_channel_nb * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
@@ -80,7 +78,6 @@ int audio_render::get_pcm_data() {
                 now_time = clock;
             }
             clock = now_time;
-//            fwrite(out_buffer, 1, static_cast<size_t>(data_size), fp_pcm);
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
@@ -100,7 +97,7 @@ void pcm_buffer_callback(SLAndroidSimpleBufferQueueItf buffer_queue_if, void *co
     if (audio != NULL) {
         int bufferSize = audio->get_pcm_data();
         if (bufferSize > 0) {
-            audio->clock += bufferSize / ((double) 44100 * 4);
+            audio->clock += bufferSize / ((double) SAMPLE_SIZE);
             if (audio->clock - audio->last_time >= 0.1) {
                 audio->last_time = audio->clock;
                 //回调应用层
@@ -173,7 +170,7 @@ void audio_render::create_player() {
     SLDataFormat_PCM pcm = {
             SL_DATAFORMAT_PCM,//播放pcm格式的数据
             2,//2个声道（立体声）
-            static_cast<SLuint32>(get_format_sample_rate(sample_rate)),//44100hz的频率
+            static_cast<SLuint32>(sample_rate * 1000),//44100hz的频率
             SL_PCMSAMPLEFORMAT_FIXED_16,//位数 16位
             SL_PCMSAMPLEFORMAT_FIXED_16,//和位数一致就行
             SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,//立体声（前左前右）
@@ -224,54 +221,6 @@ void audio_render::create_player() {
     (void) result;
     pcm_buffer_callback(buffer_queue, this);
 
-}
-
-int audio_render::get_format_sample_rate(int sample_rate) {
-    int rate = 0;
-    switch (sample_rate) {
-        case 8000:
-            rate = SL_SAMPLINGRATE_8;
-            break;
-        case 11025:
-            rate = SL_SAMPLINGRATE_11_025;
-            break;
-        case 12000:
-            rate = SL_SAMPLINGRATE_12;
-            break;
-        case 16000:
-            rate = SL_SAMPLINGRATE_16;
-            break;
-        case 22050:
-            rate = SL_SAMPLINGRATE_22_05;
-            break;
-        case 24000:
-            rate = SL_SAMPLINGRATE_24;
-            break;
-        case 32000:
-            rate = SL_SAMPLINGRATE_32;
-            break;
-        case 44100:
-            rate = SL_SAMPLINGRATE_44_1;
-            break;
-        case 48000:
-            rate = SL_SAMPLINGRATE_48;
-            break;
-        case 64000:
-            rate = SL_SAMPLINGRATE_64;
-            break;
-        case 88200:
-            rate = SL_SAMPLINGRATE_88_2;
-            break;
-        case 96000:
-            rate = SL_SAMPLINGRATE_96;
-            break;
-        case 192000:
-            rate = SL_SAMPLINGRATE_192;
-            break;
-        default:
-            rate = SL_SAMPLINGRATE_44_1;
-    }
-    return rate;
 }
 
 

@@ -26,10 +26,6 @@ void media_player::open(const char *url) {
     t_read = new std::thread(std::bind(&media_player::read_thread, this));
 }
 
-void media_player::start() {
-    play_status->pause = false;
-}
-
 void media_player::read_thread() {
     LOGD("读取线程启动成功,tid:%i\n", gettid());
     int error_code = prepare();
@@ -109,7 +105,6 @@ void media_player::decode_audio() {
                 audio_frame->channels = av_get_channel_layout_nb_channels(
                         audio_frame->channel_layout);
             }
-//            LOGD("audio decode time :%lld\n", audio_frame->pts)
             while (a_render->audio_frame_queue->getQueueSize() >= a_render->max_frame_queue_size) {
                 av_usleep(1000 * 5);
             }
@@ -159,8 +154,7 @@ int media_player::prepare() {
             if (i != -1) {
                 get_codec_context(parameters, &audio_codec_ctx);
 
-                a_render = new audio_render(play_status, audio_codec_ctx,
-                                            pFormatCtx->streams[i]->time_base);
+                a_render = new audio_render(play_status, audio_codec_ctx);
                 audio_stream_index = i;
                 duration = static_cast<int>(pFormatCtx->duration / AV_TIME_BASE);
             }
@@ -168,7 +162,6 @@ int media_player::prepare() {
             if (i != -1) {
                 get_codec_context(parameters, &video_codec_ctx);
                 video_stream_index = i;
-                video_timebase = pFormatCtx->streams[i]->time_base;
             }
         }
     }
@@ -179,21 +172,34 @@ int media_player::prepare() {
     return 1;
 }
 
+
+void media_player::play() {
+    if (play_status && a_render) {
+        play_status->pause = false;
+        a_render->play();
+    }
+}
+
+void media_player::pause() {
+    if (play_status && a_render) {
+        play_status->pause = true;
+        a_render->pause();
+    }
+}
+
+void media_player::resume() {
+    if (play_status && a_render) {
+        play_status->pause = false;
+        a_render->resume();
+    }
+}
+
 void media_player::stop() {
     play_status->exit = true;
-
     t_read->join();
     t_audio_decode->join();
-
     delete a_render;
     delete t_read;
     delete t_audio_decode;
     delete play_status;
-
-
-}
-
-void media_player::play() {
-    play_status->pause = false;
-    a_render->play();
 }

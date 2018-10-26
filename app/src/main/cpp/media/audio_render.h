@@ -19,6 +19,8 @@ extern "C" {
 
 };
 
+#define SAMPLE_SIZE 44100*4
+
 class audio_render {
 public:
     status *playStatus = NULL;
@@ -53,7 +55,7 @@ public:
     //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf buffer_queue = NULL;
 
-    audio_render(status *playStatus, AVCodecContext *codecContext, AVRational timebase);
+    audio_render(status *playStatus, AVCodecContext *codecContext);
 
     ~audio_render();
 
@@ -65,9 +67,8 @@ public:
 
     void create_player();
 
-    int get_format_sample_rate(int sample_rate);
-
     int get_pcm_data();
 
+    void init_swr(AVCodecContext *pContext);
 };
 

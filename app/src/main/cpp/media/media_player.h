@@ -44,24 +44,24 @@ public:
     //video
     int video_stream_index = -1;
     AVCodecContext *video_codec_ctx;
-    AVRational video_timebase;
 
     int prepare();
-
-    void decode_audio();
 
     void read_thread();
 
     void open(const char *string);
 
-    void start();
+    void play();
+
+    void pause();
+
+    void resume();
 
     void stop();
 
+private:
+    void decode_audio();
     void send_msg(int type);
-
-
-    void play();
 };
 
 

@@ -51,12 +51,30 @@ static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
     player->play();
 }
 
+static void JNICALL nativePause(JNIEnv *env, jobject obj) {
+    media_player *player = get_media_player(env, obj);
+    player->play();
+}
+
+static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
+    media_player *player = get_media_player(env, obj);
+    player->play();
+}
+
+static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
+    media_player *player = get_media_player(env, obj);
+    player->play();
+}
+
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
 static const JNINativeMethod g_methods[] = {
-        {"nativeInit", "()V",                   (void *) nativeInit},
-        {"nativeOpen", "(Ljava/lang/String;)V", (void *) nativeOpen},
-        {"nativePlay", "()V",                   (void *) nativePlay}
+        {"nativeInit",   "()V",                   (void *) nativeInit},
+        {"nativeOpen",   "(Ljava/lang/String;)V", (void *) nativeOpen},
+        {"nativePlay",   "()V",                   (void *) nativePlay},
+        {"nativePause",  "()V",                   (void *) nativePause},
+        {"nativeResume", "()V",                   (void *) nativeResume},
+        {"nativeStop",   "()V",                   (void *) nativeStop}
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
