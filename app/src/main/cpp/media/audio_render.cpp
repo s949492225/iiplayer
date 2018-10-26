@@ -45,6 +45,7 @@ int audio_render::get_pcm_data() {
 
         if (audio_frame_queue->getQueueSize() == 0)//加载中
         {
+
             if (!playStatus->load) {
                 playStatus->load = true;
 //                todo
@@ -237,4 +238,32 @@ void audio_render::resume() {
 }
 
 audio_render::~audio_render() {
+    pthread_join(play_t, NULL);
+
+    if (pcmPlayerObject != NULL) {
+        (*pcmPlayerObject)->Destroy(pcmPlayerObject);
+        pcmPlayerObject = NULL;
+        pcmPlayerPlay = NULL;
+        buffer_queue = NULL;
+    }
+
+    if (outputMixObject != NULL) {
+        (*outputMixObject)->Destroy(outputMixObject);
+        outputMixObject = NULL;
+        outputMixEnvironmentalReverb = NULL;
+    }
+
+    if (engineObject != NULL) {
+        (*engineObject)->Destroy(engineObject);
+        engineObject = NULL;
+        engineEngine = NULL;
+    }
+
+    if (out_buffer != NULL) {
+        delete (out_buffer);
+        out_buffer = NULL;
+    }
+
+    delete audio_frame_queue;
+    audio_frame_queue = NULL;
 }

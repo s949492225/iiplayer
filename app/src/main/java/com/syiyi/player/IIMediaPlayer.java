@@ -1,7 +1,7 @@
 package com.syiyi.player;
 
 @SuppressWarnings("WeakerAccess")
-public class IiMediaPlayer {
+public class IIMediaPlayer {
     private String url = null;
     @SuppressWarnings("unused")
     private long mNativePlayer;
@@ -18,8 +18,7 @@ public class IiMediaPlayer {
         System.loadLibrary("swscale");
     }
 
-    public IiMediaPlayer() {
-        nativeInit();
+    public IIMediaPlayer() {
     }
 
     public void setDataSource(String url) {
@@ -30,6 +29,7 @@ public class IiMediaPlayer {
         if (url == null) {
             throw new RuntimeException("url is null");
         }
+        nativeInit();
         nativeOpen(url);
     }
 

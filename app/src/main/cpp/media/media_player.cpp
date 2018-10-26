@@ -17,6 +17,7 @@ int read_interrupt_callback(void *ctx) {
 }
 
 media_player::media_player() {
+
 }
 
 void media_player::open(const char *url) {
@@ -42,10 +43,12 @@ void media_player::read_thread() {
         if (av_read_frame(pFormatCtx, packet) == 0) {
             //音频
             if (packet->stream_index == audio_stream_index) {
-                while (play_status->audio_packet_queue->getQueueSize() >=
-                       play_status->max_packet_queue_size) {
+                while (!play_status->exit && play_status->audio_packet_queue->getQueueSize() >=
+                                             play_status->max_packet_queue_size) {
                     av_usleep(1000 * 5);
                 }
+                if (play_status->exit)
+                    break;
                 play_status->audio_packet_queue->putPacket(packet);
                 //视频
             } else {
@@ -105,8 +108,12 @@ void media_player::decode_audio() {
                 audio_frame->channels = av_get_channel_layout_nb_channels(
                         audio_frame->channel_layout);
             }
-            while (a_render->audio_frame_queue->getQueueSize() >= a_render->max_frame_queue_size) {
+            while (!play_status->exit &&
+                   a_render->audio_frame_queue->getQueueSize() >= a_render->max_frame_queue_size) {
                 av_usleep(1000 * 5);
+            }
+            if (play_status->exit) {
+                continue;
             }
             a_render->audio_frame_queue->putFrame(audio_frame);
             av_packet_free(&packet);
@@ -195,11 +202,49 @@ void media_player::resume() {
 }
 
 void media_player::stop() {
-    play_status->exit = true;
-    t_read->join();
-    t_audio_decode->join();
+    if (play_status) {
+        play_status->load = false;
+        play_status->exit = true;
+        pthread_cond_signal(&play_status->audio_packet_queue->condPacket);
+        pthread_cond_signal(&play_status->video_packet_queue->condPacket);
+    }
+    if (a_render) {
+        pthread_cond_signal(&a_render->audio_frame_queue->condPacket);
+    }
+
+    if (t_read) {
+        t_read->join();
+    }
+    if (t_audio_decode) {
+        t_audio_decode->join();
+    }
     delete a_render;
-    delete t_read;
-    delete t_audio_decode;
+    a_render = NULL;
+
     delete play_status;
+    play_status = NULL;
+
+    if (audio_codec_ctx) {
+        avcodec_close(audio_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        audio_codec_ctx = NULL;
+    }
+
+    if (video_codec_ctx) {
+        avcodec_close(video_codec_ctx);
+        avcodec_free_context(&video_codec_ctx);
+        video_codec_ctx = NULL;
+    }
+
+    if (pFormatCtx) {
+        avformat_close_input(&pFormatCtx);
+        avformat_free_context(pFormatCtx);
+        pFormatCtx = NULL;
+    }
+
+    avformat_network_deinit();
+
+    if (LOG_DEBUG) {
+        LOGD("player 资源释放完成");
+    }
 }

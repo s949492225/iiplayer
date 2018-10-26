@@ -5,9 +5,10 @@
 #include "iiplayer_jni.h"
 #include "android_log.h"
 #include "../media/media_player.h"
+#define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
 jfieldID get_player_field(JNIEnv *env) {
-    jclass jcs = env->FindClass("com/syiyi/player/IiMediaPlayer");
+    jclass jcs = env->FindClass(IIMediaPlayer);
     return env->GetFieldID(jcs, "mNativePlayer", "J");
 }
 
@@ -33,6 +34,11 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
  * @param obj
  */
 static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
+    media_player *old_player = get_media_player(env, obj);
+    if (old_player) {
+        old_player->stop();
+        delete old_player;
+    }
     media_player *player = new media_player();
     set_media_player(env, obj, player);
 }
@@ -53,17 +59,19 @@ static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
 
 static void JNICALL nativePause(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->play();
+    player->pause();
 }
 
 static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->play();
+    player->resume();
 }
 
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->play();
+    player->stop();
+    delete player;
+    set_media_player(env, obj, nullptr);
 }
 
 //++ jni register ++//
@@ -84,7 +92,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
         return -1;
     }
 
-    jclass cls = env->FindClass("com/syiyi/player/IiMediaPlayer");
+    jclass cls = env->FindClass(IIMediaPlayer);
     int ret = env->RegisterNatives(cls, g_methods, sizeof(g_methods) / sizeof(g_methods[0]));
     if (ret != JNI_OK) {
         __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR :RegisterNative failed\n");
