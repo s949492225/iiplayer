@@ -1,5 +1,7 @@
 package com.syiyi.player;
 
+import android.util.Log;
+
 @SuppressWarnings("WeakerAccess")
 public class IIMediaPlayer {
     private String url = null;
@@ -61,5 +63,9 @@ public class IIMediaPlayer {
 
     private native void nativeStop();
 
-
+    @Override
+    protected void finalize() throws Throwable {
+        Log.d("ffplayer", "mNativePlayer:" + mNativePlayer);
+        super.finalize();
+    }
 }

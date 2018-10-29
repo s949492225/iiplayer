@@ -5,6 +5,7 @@
 #include "iiplayer_jni.h"
 #include "android_log.h"
 #include "../media/media_player.h"
+
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
 jfieldID get_player_field(JNIEnv *env) {
@@ -54,24 +55,33 @@ static void JNICALL nativeOpen(JNIEnv *env, jobject obj, jstring url) {
 
 static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->play();
+    if (player != NULL) {
+        player->play();
+    }
 }
 
 static void JNICALL nativePause(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->pause();
+    if (player != NULL) {
+        player->pause();
+    }
 }
 
 static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->resume();
+    if (player != NULL) {
+
+        player->resume();
+    }
 }
 
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
-    player->stop();
-    delete player;
-    set_media_player(env, obj, nullptr);
+    if (player != NULL) {
+        player->stop();
+        delete player;
+        set_media_player(env, obj, NULL);
+    }
 }
 
 //++ jni register ++//
@@ -103,6 +113,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
     g_jvm = vm;
     return JNI_VERSION_1_4;
 }
+
+JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved) {
+    __android_log_print(ANDROID_LOG_INFO, "native", "JNI_OnUnload");
+    //release
+    JNIEnv *env = get_jni_env();
+    jclass cls = env->FindClass(IIMediaPlayer);
+    env->UnregisterNatives(cls);
+
+    g_jvm = NULL;
+}
+
 
 JNIEXPORT JavaVM *get_jni_jvm(void) {
     return g_jvm;

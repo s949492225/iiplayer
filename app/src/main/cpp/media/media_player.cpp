@@ -214,9 +214,13 @@ void media_player::stop() {
 
     if (t_read) {
         t_read->join();
+        delete t_read;
+        t_read = NULL;
     }
     if (t_audio_decode) {
         t_audio_decode->join();
+        delete t_audio_decode;
+        t_audio_decode = NULL
     }
     delete a_render;
     a_render = NULL;
