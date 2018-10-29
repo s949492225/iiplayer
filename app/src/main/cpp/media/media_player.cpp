@@ -220,7 +220,7 @@ void media_player::stop() {
     if (t_audio_decode) {
         t_audio_decode->join();
         delete t_audio_decode;
-        t_audio_decode = NULL
+        t_audio_decode = NULL;
     }
     delete a_render;
     a_render = NULL;
