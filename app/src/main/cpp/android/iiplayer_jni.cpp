@@ -22,6 +22,7 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
     //release old
     media_player *old_player = get_media_player(env, obj);
     if (old_player != NULL) {
+        old_player->stop();
         delete old_player;
     }
 
@@ -78,8 +79,6 @@ static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
     media_player *player = get_media_player(env, obj);
     if (player != NULL) {
-        player->stop();
-        delete player;
         set_media_player(env, obj, NULL);
     }
 }

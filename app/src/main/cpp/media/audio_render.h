@@ -28,14 +28,14 @@ public:
     uint8_t *out_buffer = NULL;
     int data_size = 0;
     AVRational audio_timebase;
-    frame_queue *audio_frame_queue;
-    double clock;//总的播放时长
-    double now_time;//当前frame时间
-    double last_time; //上一次调用时间
+    frame_queue *audio_frame_queue = NULL;
+    double clock = 0;//总的播放时长
+    double now_time = 0;//当前frame时间
+    double last_time = 0; //上一次调用时间
     int max_frame_queue_size = 40;
     int out_channel_nb;
-    SwrContext *swrCtr;
-    pthread_t play_t;
+    SwrContext *swrCtr = NULL;
+    pthread_t play_t = -1;
     // 引擎接口
     SLObjectItf engineObject = NULL;
     SLEngineItf engineEngine = NULL;

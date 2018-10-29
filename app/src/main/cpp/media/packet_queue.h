@@ -21,7 +21,7 @@ public:
     std::queue<AVPacket *> queuePacket;
     pthread_mutex_t mutexPacket;
     pthread_cond_t condPacket;
-    status *playStatus;
+    status *playStatus = NULL;
 public:
     packet_queue(status *playStatus);
 

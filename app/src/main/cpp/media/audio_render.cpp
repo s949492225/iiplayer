@@ -238,7 +238,9 @@ void audio_render::resume() {
 }
 
 audio_render::~audio_render() {
-    pthread_join(play_t, NULL);
+    if (play_t != -1) {
+        pthread_join(play_t, NULL);
+    }
 
     if (pcmPlayerObject != NULL) {
         (*pcmPlayerObject)->Destroy(pcmPlayerObject);
@@ -269,6 +271,8 @@ audio_render::~audio_render() {
         swrCtr = NULL;
     }
 
-    delete audio_frame_queue;
-    audio_frame_queue = NULL;
+    if (audio_frame_queue != NULL) {
+        delete audio_frame_queue;
+        audio_frame_queue = NULL;
+    }
 }

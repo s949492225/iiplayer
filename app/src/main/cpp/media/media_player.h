@@ -28,22 +28,22 @@ class media_player {
 public:
     media_player();
 
-    status *play_status;
-    std::thread *t_read;
-    std::thread *t_audio_decode;
+    status *play_status = NULL;
+    std::thread *t_read = NULL;
+    std::thread *t_audio_decode = NULL;
 
-    AVFormatContext *pFormatCtx;
+    AVFormatContext *pFormatCtx = NULL;
     const char *url = NULL;
-    int duration;
+    int duration = 0;
 
     //audio
     int audio_stream_index = -1;
-    AVCodecContext *audio_codec_ctx;
-    audio_render *a_render;
+    AVCodecContext *audio_codec_ctx = NULL;
+    audio_render *a_render = NULL;
 
     //video
     int video_stream_index = -1;
-    AVCodecContext *video_codec_ctx;
+    AVCodecContext *video_codec_ctx = NULL;
 
     int prepare();
 
@@ -61,6 +61,7 @@ public:
 
 private:
     void decode_audio();
+
     void send_msg(int type);
 };
 

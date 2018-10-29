@@ -20,7 +20,7 @@ public:
     std::queue<AVFrame *> queuePacket;
     pthread_mutex_t mutexPacket;
     pthread_cond_t condPacket;
-    status *playStatus;
+    status *playStatus=NULL;
 public:
     frame_queue(status *playStatus);
 

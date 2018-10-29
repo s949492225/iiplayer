@@ -222,25 +222,29 @@ void media_player::stop() {
         delete t_audio_decode;
         t_audio_decode = NULL;
     }
-    delete a_render;
-    a_render = NULL;
+    if (a_render != NULL) {
+        delete a_render;
+        a_render = NULL;
+    }
 
-    delete play_status;
-    play_status = NULL;
+    if (play_status != NULL) {
+        delete play_status;
+        play_status = NULL;
+    }
 
-    if (audio_codec_ctx) {
+    if (audio_codec_ctx != NULL) {
         avcodec_close(audio_codec_ctx);
         avcodec_free_context(&audio_codec_ctx);
         audio_codec_ctx = NULL;
     }
 
-    if (video_codec_ctx) {
+    if (video_codec_ctx != NULL) {
         avcodec_close(video_codec_ctx);
         avcodec_free_context(&video_codec_ctx);
         video_codec_ctx = NULL;
     }
 
-    if (pFormatCtx) {
+    if (pFormatCtx != NULL) {
         avformat_close_input(&pFormatCtx);
         avformat_free_context(pFormatCtx);
         pFormatCtx = NULL;

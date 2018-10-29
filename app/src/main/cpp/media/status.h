@@ -15,9 +15,9 @@ public:
 
     bool exit = false;
     bool pause = true;
-    packet_queue *audio_packet_queue;
-    packet_queue *video_packet_queue;
-    int max_packet_queue_size=40;
+    packet_queue *audio_packet_queue = NULL;
+    packet_queue *video_packet_queue = NULL;
+    int max_packet_queue_size = 40;
     bool seek = false;
     bool load = false;
 };
