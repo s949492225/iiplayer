@@ -264,6 +264,11 @@ audio_render::~audio_render() {
         out_buffer = NULL;
     }
 
+    if (swrCtr != NULL) {
+        swr_free(&swrCtr);
+        swrCtr = NULL;
+    }
+
     delete audio_frame_queue;
     audio_frame_queue = NULL;
 }
