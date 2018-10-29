@@ -13,6 +13,7 @@ add_library( # Sets the name of the library.
              src/main/cpp/media/util.cpp
              src/main/cpp/media/frame_queue.cpp
              src/main/cpp/media/audio_render.cpp
+             src/main/cpp/android/util.cpp
              )
 
 add_library( avcodec SHARED IMPORTED)

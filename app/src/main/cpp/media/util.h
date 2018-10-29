@@ -12,7 +12,6 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-#include "jni.h"
 #include "../android/android_log.h"
 
 int get_codec_context(AVCodecParameters *codecpar, AVCodecContext **avCodecContext);

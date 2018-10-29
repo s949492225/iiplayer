@@ -3,9 +3,22 @@
 //
 
 #include "media_player.h"
+#import  "../android/iiplayer_jni.h"
 
 void media_player::send_msg(int type) {
-    LOGD("消息内容:%i\n", type);
+    if (msg_sender != NULL) {
+        send_jni_msg(type);
+    }
+}
+
+void media_player::send_jni_msg(int type) const {
+    JNIEnv *env = get_jni_env();
+    jobject sender = static_cast<jobject>(msg_sender);
+
+    jclass cls = env->GetObjectClass(sender);
+    jmethodID send_method = env->GetMethodID(cls, "sendEmptyMessage", "(I)Z");
+
+    env->CallBooleanMethod(sender, send_method, type);
 }
 
 int read_interrupt_callback(void *ctx) {

@@ -1,12 +1,17 @@
 package com.syiyi.player;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
+
 
 @SuppressWarnings("WeakerAccess")
 public class IIMediaPlayer {
     private String url = null;
     @SuppressWarnings("unused")
     private long mNativePlayer;
+    private Handler mHandler;
 
     static {
         System.loadLibrary("player");
@@ -21,6 +26,13 @@ public class IIMediaPlayer {
     }
 
     public IIMediaPlayer() {
+        mHandler = new Handler(Looper.myLooper(), new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message msg) {
+                Log.d("IIMediaPlayer", "handleMessage: " + msg.what);
+                return false;
+            }
+        });
     }
 
     public void setDataSource(String url) {
@@ -68,4 +80,5 @@ public class IIMediaPlayer {
         Log.d("ffplayer", "mNativePlayer:" + mNativePlayer);
         super.finalize();
     }
+
 }

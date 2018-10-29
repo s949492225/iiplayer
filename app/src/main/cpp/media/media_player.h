@@ -44,6 +44,7 @@ public:
     //video
     int video_stream_index = -1;
     AVCodecContext *video_codec_ctx = NULL;
+    void *msg_sender = NULL;
 
     int prepare();
 
@@ -63,6 +64,8 @@ private:
     void decode_audio();
 
     void send_msg(int type);
+
+    void send_jni_msg(int type) const;
 };
 
 

@@ -8,13 +8,20 @@
 
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
-jfieldID get_player_field(JNIEnv *env) {
+jfieldID get_player_native_player_field(JNIEnv *env) {
     jclass jcs = env->FindClass(IIMediaPlayer);
     return env->GetFieldID(jcs, "mNativePlayer", "J");
 }
 
+jobject get_player_sender(JNIEnv *env, jobject obj) {
+    jclass jcs = env->FindClass(IIMediaPlayer);
+    jfieldID send_id = env->GetFieldID(jcs, "mHandler", "Landroid/os/Handler;");
+    jobject send_obj = env->GetObjectField(obj, send_id);
+    return send_obj;
+}
+
 media_player *get_media_player(JNIEnv *env, jobject obj) {
-    jfieldID jfd = get_player_field(env);
+    jfieldID jfd = get_player_native_player_field(env);
     return reinterpret_cast<media_player *>(env->GetLongField(obj, jfd));
 }
 
@@ -22,12 +29,21 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
     //release old
     media_player *old_player = get_media_player(env, obj);
     if (old_player != NULL) {
+        if (old_player->msg_sender != NULL) {
+            env->DeleteGlobalRef(static_cast<jobject>(old_player->msg_sender));
+            old_player->msg_sender = NULL;
+        }
         old_player->stop();
         delete old_player;
     }
+    jfieldID jfd = get_player_native_player_field(env);
 
-    jfieldID jfd = get_player_field(env);
-    env->SetLongField(obj, jfd, reinterpret_cast<jlong>(player));
+    if (player != NULL) {
+        player->msg_sender = env->NewGlobalRef(get_player_sender(env, obj));
+        env->SetLongField(obj, jfd, reinterpret_cast<jlong>(player));
+    } else {
+        env->SetLongField(obj, jfd, 0);
+    }
 }
 
 /**
@@ -39,7 +55,6 @@ static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
     media_player *old_player = get_media_player(env, obj);
     if (old_player) {
         old_player->stop();
-        delete old_player;
     }
     media_player *player = new media_player();
     set_media_player(env, obj, player);
@@ -135,16 +150,15 @@ JNIEXPORT JNIEnv *get_jni_env(void) {
         return NULL;
     }
     int status = g_jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4);
-    if (status != JNI_OK) {
-        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:get_jni_env GetEnv failed\n");
-        return NULL;
+    if (status < 0) {
+        status = g_jvm->AttachCurrentThread(&env, NULL);
+        if (status != JNI_OK) {
+            __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni",
+                                "ERROR:get_jni_env attach current thread failed\n");
+            return NULL;
+        }
     }
-    status = g_jvm->AttachCurrentThread(&env, NULL);
-    if (status != JNI_OK) {
-        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni",
-                            "ERROR:get_jni_env attach current thread failed\n");
-        return NULL;
-    }
+
     return env;
 
 }
