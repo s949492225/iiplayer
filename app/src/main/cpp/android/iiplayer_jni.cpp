@@ -4,7 +4,7 @@
 
 #include "iiplayer_jni.h"
 #include "android_log.h"
-#include "../media/media_player.h"
+#include "../media/MediaPlayer.h"
 
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
@@ -20,18 +20,18 @@ jobject get_player_sender(JNIEnv *env, jobject obj) {
     return send_obj;
 }
 
-media_player *get_media_player(JNIEnv *env, jobject obj) {
+MediaPlayer *get_media_player(JNIEnv *env, jobject obj) {
     jfieldID jfd = get_player_native_player_field(env);
-    return reinterpret_cast<media_player *>(env->GetLongField(obj, jfd));
+    return reinterpret_cast<MediaPlayer *>(env->GetLongField(obj, jfd));
 }
 
-void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
+void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
     //release old
-    media_player *old_player = get_media_player(env, obj);
+    MediaPlayer *old_player = get_media_player(env, obj);
     if (old_player != NULL) {
-        if (old_player->msg_sender != NULL) {
-            env->DeleteGlobalRef(static_cast<jobject>(old_player->msg_sender));
-            old_player->msg_sender = NULL;
+        if (old_player->mMsgSender != NULL) {
+            env->DeleteGlobalRef(static_cast<jobject>(old_player->mMsgSender));
+            old_player->mMsgSender = NULL;
         }
         old_player->stop();
         delete old_player;
@@ -39,7 +39,7 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
     jfieldID jfd = get_player_native_player_field(env);
 
     if (player != NULL) {
-        player->msg_sender = env->NewGlobalRef(get_player_sender(env, obj));
+        player->mMsgSender = env->NewGlobalRef(get_player_sender(env, obj));
         env->SetLongField(obj, jfd, reinterpret_cast<jlong>(player));
     } else {
         env->SetLongField(obj, jfd, 0);
@@ -52,11 +52,11 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
  * @param obj
  */
 static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
-    media_player *old_player = get_media_player(env, obj);
+    MediaPlayer *old_player = get_media_player(env, obj);
     if (old_player) {
         old_player->stop();
     }
-    media_player *player = new media_player();
+    MediaPlayer *player = new MediaPlayer();
     set_media_player(env, obj, player);
 }
 
@@ -65,26 +65,26 @@ static void JNICALL nativeOpen(JNIEnv *env, jobject obj, jstring url) {
     char *new_str = strdup(str_c);
     env->ReleaseStringUTFChars(url, str_c);
 
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     player->open(new_str);
 }
 
 static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
         player->play();
     }
 }
 
 static void JNICALL nativePause(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
         player->pause();
     }
 }
 
 static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
 
         player->resume();
@@ -92,7 +92,7 @@ static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
 }
 
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
         set_media_player(env, obj, NULL);
     }

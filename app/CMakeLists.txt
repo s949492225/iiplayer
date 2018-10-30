@@ -7,7 +7,7 @@ add_library( # Sets the name of the library.
              player
              SHARED
              src/main/cpp/android/iiplayer_jni.cpp
-             src/main/cpp/media/media_player.cpp
+        src/main/cpp/media/MediaPlayer.cpp
         src/main/cpp/media/PacketQueue.cpp
         src/main/cpp/media/Status.cpp
              src/main/cpp/media/util.cpp

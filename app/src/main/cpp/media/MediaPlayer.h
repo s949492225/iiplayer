@@ -24,31 +24,30 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-class media_player {
+class MediaPlayer {
 public:
-    media_player();
+    MediaPlayer();
 
-    Status *play_status = NULL;
-    std::thread *t_read = NULL;
-    std::thread *t_audio_decode = NULL;
+    Status *mStatus = NULL;
+    std::thread *mReadThread = NULL;
+    std::thread *mAudioDecodeThread = NULL;
 
-    AVFormatContext *pFormatCtx = NULL;
-    const char *url = NULL;
-    int duration = 0;
-
+    AVFormatContext *mFormatCtx = NULL;
+    const char *mUrl = NULL;
+    int mDuration = 0;
     //audio
-    int audio_stream_index = -1;
-    AVCodecContext *audio_codec_ctx = NULL;
-    audio_render *a_render = NULL;
+    int mAudioStreamIndex = -1;
+    AVCodecContext *mAudioCodecCtx = NULL;
+    audio_render *mAudioRender = NULL;
 
     //video
-    int video_stream_index = -1;
-    AVCodecContext *video_codec_ctx = NULL;
-    void *msg_sender = NULL;
+    int mVideoStreamIndex = -1;
+    AVCodecContext *mVideoCodecCtx = NULL;
+    void *mMsgSender = NULL;
 
     int prepare();
 
-    void read_thread();
+    void readThread();
 
     void open(const char *string);
 
@@ -61,11 +60,11 @@ public:
     void stop();
 
 private:
-    void decode_audio();
+    void decodeAudio();
 
-    void send_msg(int type);
+    void sendMsg(int type);
 
-    void send_jni_msg(int type) const;
+    void sendJniMsg(int type) const;
 };
 
 
