@@ -282,7 +282,7 @@ bool AudioRender::isQueueFull() {
 }
 
 void AudioRender::notifyWait() {
-    pthread_cond_signal(&mQueue->mCond);
+    mQueue->notifyAll();
 }
 
 void AudioRender::putFrame(AVFrame *frame) {

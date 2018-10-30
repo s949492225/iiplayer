@@ -70,3 +70,7 @@ void FrameQueue::clearAll() {
     pthread_mutex_unlock(&mMutex);
 }
 
+void FrameQueue::notifyAll() {
+    pthread_cond_signal(&mCond);
+}
+

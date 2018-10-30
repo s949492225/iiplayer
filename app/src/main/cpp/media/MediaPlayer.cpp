@@ -21,7 +21,7 @@ void MediaPlayer::sendJniMsg(int type) const {
     env->CallBooleanMethod(sender, send_method, type);
 }
 
-int read_interrupt_callback(void *ctx) {
+int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
     if (player->mStatus->mExit) {
         return AVERROR_EOF;
@@ -146,7 +146,7 @@ int MediaPlayer::prepare() {
     avformat_network_init();
 
     mFormatCtx = avformat_alloc_context();
-    mFormatCtx->interrupt_callback.callback = read_interrupt_callback;
+    mFormatCtx->interrupt_callback.callback = ioInterruptCallback;
     mFormatCtx->interrupt_callback.opaque = this;
 
     int error = avformat_open_input(&mFormatCtx, mUrl, NULL, NULL);
@@ -214,11 +214,12 @@ void MediaPlayer::resume() {
 }
 
 void MediaPlayer::stop() {
+
     if (mStatus) {
         mStatus->isLoad = false;
         mStatus->mExit = true;
-        mStatus->mAudioQueue->signalAll();
-        mStatus->mVideoQueue->signalAll();
+        mStatus->mAudioQueue->notifyAll();
+        mStatus->mVideoQueue->notifyAll();
     }
 
     if (mAudioRender) {
@@ -265,7 +266,20 @@ void MediaPlayer::stop() {
 
     avformat_network_deinit();
 
+    if (mMsgSender != NULL) {
+        get_jni_env()->DeleteGlobalRef(static_cast<jobject>(mMsgSender));
+        mMsgSender = NULL;
+    }
+
     if (LOG_DEBUG) {
         LOGD("player 资源释放完成");
     }
+}
+
+void MediaPlayer::setMsgSender(jobject *sender) {
+    mMsgSender = *sender;
+}
+
+void MediaPlayer::deleteMsgSender() {
+
 }

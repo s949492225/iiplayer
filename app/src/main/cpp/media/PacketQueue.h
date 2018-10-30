@@ -35,7 +35,7 @@ public:
 
     void clearAll();
 
-    void signalAll();
+    void notifyAll();
 
 };
 

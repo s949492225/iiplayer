@@ -16,7 +16,7 @@ extern "C"
 class Status;
 
 class FrameQueue {
-public:
+private:
     std::queue<AVFrame *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
@@ -33,6 +33,8 @@ public:
     int getQueueSize();
 
     void clearAll();
+
+    void notifyAll();
 
 };
 
