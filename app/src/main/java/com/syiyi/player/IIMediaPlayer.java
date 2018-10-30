@@ -43,7 +43,6 @@ public class IIMediaPlayer {
         if (url == null) {
             throw new RuntimeException("url is null");
         }
-        nativeInit();
         nativeOpen(url);
     }
 
@@ -63,13 +62,17 @@ public class IIMediaPlayer {
         nativeStop();
     }
 
-    private native void nativeInit();
+    public void seek(int sec) {
+        nativeSeek(sec);
+    }
 
     private native void nativeOpen(String path);
 
     private native void nativePlay();
 
     private native void nativePause();
+
+    private native void nativeSeek(int sec);
 
     private native void nativeResume();
 

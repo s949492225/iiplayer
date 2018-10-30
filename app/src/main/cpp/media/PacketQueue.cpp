@@ -30,7 +30,7 @@ int PacketQueue::putPacket(AVPacket *packet) {
 int PacketQueue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mMutex);
     int ret = -1;
-    while (mStatus != NULL && !mStatus->mExit) {
+    while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
             AVPacket *avPacket = mQueue.front();
             if (av_packet_ref(packet, avPacket) == 0) {

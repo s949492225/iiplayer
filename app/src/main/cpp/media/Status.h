@@ -13,13 +13,14 @@ public:
 
     ~Status();
 
-    bool mExit = false;
-    bool mPause = true;
+    bool isExit = false;
+    bool isPause = true;
     PacketQueue *mAudioQueue = NULL;
     PacketQueue *mVideoQueue = NULL;
     int mMaxQueueSize = 40;
     bool isSeek = false;
     bool isLoad = false;
+    int mSeekSec = 0;
 };
 
 #endif //IIPLAYER_STATUS_H

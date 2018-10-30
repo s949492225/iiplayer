@@ -39,7 +39,7 @@ void AudioRender::play() {
 
 int AudioRender::getPcmData() {
     mOutSize = 0;
-    while (mStatus != NULL && !mStatus->mExit) {
+    while (mStatus != NULL && !mStatus->isExit) {
 
         if (mQueue->getQueueSize() == 0)//加载中
         {
@@ -287,4 +287,13 @@ void AudioRender::notifyWait() {
 
 void AudioRender::putFrame(AVFrame *frame) {
     mQueue->putFrame(frame);
+}
+
+void AudioRender::clearQueue() {
+    mQueue->clearAll();
+}
+
+void AudioRender::resetTime() {
+    mSumPlayedTime = 0;
+    mLastTime = 0;
 }

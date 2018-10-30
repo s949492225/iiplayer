@@ -28,7 +28,7 @@ int FrameQueue::putFrame(AVFrame *packet) {
 int FrameQueue::getFrame(AVFrame *frame) {
     pthread_mutex_lock(&mMutex);
     int ret = -1;
-    while (mStatus != NULL && !mStatus->mExit) {
+    while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
             AVFrame *avFrame = mQueue.front();
             if (av_frame_ref(frame, avFrame) == 0) {

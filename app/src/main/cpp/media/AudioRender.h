@@ -83,6 +83,9 @@ public:
 
     void putFrame(AVFrame *frame);
 
+    void clearQueue();
+
+    void resetTime();
 };
 
 

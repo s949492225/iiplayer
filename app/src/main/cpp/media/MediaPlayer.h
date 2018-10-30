@@ -67,10 +67,13 @@ public:
 
     void resume();
 
+    void seek(int sec);
+
     void stop();
 
     void setMsgSender(jobject *sender);
-    void deleteMsgSender();
+
+    void handlerSeek();
 };
 
 

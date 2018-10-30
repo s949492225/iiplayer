@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void seek(View view) {
-
+        mPlayer.seek(30);
     }
 
     public void stop(View view) {

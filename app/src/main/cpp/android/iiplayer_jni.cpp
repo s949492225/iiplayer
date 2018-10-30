@@ -52,7 +52,7 @@ void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
  * @param env
  * @param obj
  */
-static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
+static void JNICALL init(JNIEnv *env, jobject obj) {
     MediaPlayer *old_player = get_media_player(env, obj);
     if (old_player) {
         old_player->stop();
@@ -62,6 +62,8 @@ static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
 }
 
 static void JNICALL nativeOpen(JNIEnv *env, jobject obj, jstring url) {
+    init(env, obj);
+
     const char *str_c = env->GetStringUTFChars(url, NULL);
     char *new_str = strdup(str_c);
     env->ReleaseStringUTFChars(url, str_c);
@@ -87,8 +89,14 @@ static void JNICALL nativePause(JNIEnv *env, jobject obj) {
 static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
     MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
-
         player->resume();
+    }
+}
+
+static void JNICALL nativeSeek(JNIEnv *env, jobject obj, jint sec) {
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        player->seek(sec);
     }
 }
 
@@ -102,11 +110,11 @@ static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
 static const JNINativeMethod g_methods[] = {
-        {"nativeInit",   "()V",                   (void *) nativeInit},
         {"nativeOpen",   "(Ljava/lang/String;)V", (void *) nativeOpen},
         {"nativePlay",   "()V",                   (void *) nativePlay},
         {"nativePause",  "()V",                   (void *) nativePause},
         {"nativeResume", "()V",                   (void *) nativeResume},
+        {"nativeSeek",   "(I)V",                  (void *) nativeSeek},
         {"nativeStop",   "()V",                   (void *) nativeStop}
 };
 

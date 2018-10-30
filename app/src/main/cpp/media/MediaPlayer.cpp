@@ -23,7 +23,7 @@ void MediaPlayer::sendJniMsg(int type) const {
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
-    if (player->mStatus->mExit) {
+    if (player->mStatus->isExit) {
         return AVERROR_EOF;
     }
     return 0;
@@ -47,8 +47,8 @@ void MediaPlayer::readThread() {
         return;
     }
     //read packet
-    while (mStatus != NULL && !mStatus->mExit) {
-        if (mStatus->mPause) {
+    while (mStatus != NULL && !mStatus->isExit) {
+        if (mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -56,11 +56,11 @@ void MediaPlayer::readThread() {
         if (av_read_frame(mFormatCtx, packet) == 0) {
             //音频
             if (packet->stream_index == mAudioStreamIndex) {
-                while (!mStatus->mExit && mStatus->mAudioQueue->getQueueSize() >=
-                                          mStatus->mMaxQueueSize) {
+                while (!mStatus->isExit && mStatus->mAudioQueue->getQueueSize() >=
+                                           mStatus->mMaxQueueSize) {
                     av_usleep(1000 * 5);
                 }
-                if (mStatus->mExit)
+                if (mStatus->isExit)
                     break;
                 mStatus->mAudioQueue->putPacket(packet);
                 //视频
@@ -90,8 +90,13 @@ void MediaPlayer::decodeAudio() {
     AVFrame *audioFrame = NULL;
     int ret = 0;
 
-    while (mStatus != NULL && !mStatus->mExit) {
-        if (mStatus->mPause) {
+    while (mStatus != NULL && !mStatus->isExit) {
+
+        if (mStatus->isSeek) {
+            handlerSeek();
+        }
+
+        if (mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -121,10 +126,10 @@ void MediaPlayer::decodeAudio() {
                 audioFrame->channels = av_get_channel_layout_nb_channels(
                         audioFrame->channel_layout);
             }
-            while (!mStatus->mExit && mAudioRender->isQueueFull()) {
+            while (!mStatus->isExit && mAudioRender->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mStatus->mExit) {
+            if (mStatus->isExit) {
                 continue;
             }
             mAudioRender->putFrame(audioFrame);
@@ -194,30 +199,50 @@ int MediaPlayer::prepare() {
 
 void MediaPlayer::play() {
     if (mStatus && mAudioRender) {
-        mStatus->mPause = false;
+        mStatus->isPause = false;
         mAudioRender->play();
     }
 }
 
 void MediaPlayer::pause() {
     if (mStatus && mAudioRender) {
-        mStatus->mPause = true;
+        mStatus->isPause = true;
         mAudioRender->pause();
     }
 }
 
 void MediaPlayer::resume() {
     if (mStatus && mAudioRender) {
-        mStatus->mPause = false;
+        mStatus->isPause = false;
         mAudioRender->resume();
     }
+}
+
+void MediaPlayer::seek(int sec) {
+    mStatus->mSeekSec = sec;
+    mStatus->isSeek = true;
+
+}
+
+void MediaPlayer::handlerSeek() {
+    //clear
+    mStatus->mAudioQueue->clearAll();
+    mStatus->mVideoQueue->clearAll();
+    mAudioRender->clearQueue();
+    mAudioRender->resetTime();
+
+    //seek io
+    int64_t rel = mStatus->mSeekSec * AV_TIME_BASE;
+    avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
+
+    mStatus->isSeek = false;
 }
 
 void MediaPlayer::stop() {
 
     if (mStatus) {
         mStatus->isLoad = false;
-        mStatus->mExit = true;
+        mStatus->isExit = true;
         mStatus->mAudioQueue->notifyAll();
         mStatus->mVideoQueue->notifyAll();
     }
@@ -280,6 +305,4 @@ void MediaPlayer::setMsgSender(jobject *sender) {
     mMsgSender = *sender;
 }
 
-void MediaPlayer::deleteMsgSender() {
 
-}
