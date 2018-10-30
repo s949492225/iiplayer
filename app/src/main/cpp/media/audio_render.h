@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "status.h"
+#include "Status.h"
 #include <pthread.h>
 #include "frame_queue.h"
 #include <unistd.h>
@@ -23,7 +23,7 @@ extern "C" {
 
 class audio_render {
 public:
-    status *playStatus = NULL;
+    Status *playStatus = NULL;
     int sample_rate = 0;
     uint8_t *out_buffer = NULL;
     int data_size = 0;
@@ -55,7 +55,7 @@ public:
     //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf buffer_queue = NULL;
 
-    audio_render(status *playStatus, AVCodecContext *codecContext);
+    audio_render(Status *playStatus, AVCodecContext *codecContext);
 
     ~audio_render();
 

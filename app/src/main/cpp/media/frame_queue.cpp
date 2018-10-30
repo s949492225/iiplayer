@@ -3,9 +3,9 @@
 //
 
 #include "frame_queue.h"
-#include "status.h"
+#include "Status.h"
 
-frame_queue::frame_queue(status *playStatus) {
+frame_queue::frame_queue(Status *playStatus) {
     this->playStatus = playStatus;
     pthread_mutex_init(&mutexPacket, NULL);
     pthread_cond_init(&condPacket, NULL);
@@ -28,7 +28,7 @@ int frame_queue::putFrame(AVFrame *packet) {
 int frame_queue::getFrame(AVFrame *frame) {
     pthread_mutex_lock(&mutexPacket);
     int ret = -1;
-    while (playStatus != NULL && !playStatus->exit) {
+    while (playStatus != NULL && !playStatus->mExit) {
         if (queuePacket.size() > 0) {
             AVFrame *avFrame = queuePacket.front();
             if (av_frame_ref(frame, avFrame) == 0) {

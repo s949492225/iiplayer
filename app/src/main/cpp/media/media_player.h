@@ -10,7 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "util.h"
-#include "status.h"
+#include "Status.h"
 #include "audio_render.h"
 #include <unistd.h>
 #include "time.h"
@@ -28,7 +28,7 @@ class media_player {
 public:
     media_player();
 
-    status *play_status = NULL;
+    Status *play_status = NULL;
     std::thread *t_read = NULL;
     std::thread *t_audio_decode = NULL;
 

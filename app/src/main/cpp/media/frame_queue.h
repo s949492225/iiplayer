@@ -13,16 +13,16 @@ extern "C"
 #include "libavcodec/avcodec.h"
 };
 
-class status;
+class Status;
 
 class frame_queue {
 public:
     std::queue<AVFrame *> queuePacket;
     pthread_mutex_t mutexPacket;
     pthread_cond_t condPacket;
-    status *playStatus=NULL;
+    Status *playStatus=NULL;
 public:
-    frame_queue(status *playStatus);
+    frame_queue(Status *playStatus);
 
     ~frame_queue();
 

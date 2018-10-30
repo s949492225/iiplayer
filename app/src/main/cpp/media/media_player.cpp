@@ -23,7 +23,7 @@ void media_player::send_jni_msg(int type) const {
 
 int read_interrupt_callback(void *ctx) {
     media_player *player = static_cast<media_player *>(ctx);
-    if (player->play_status->exit) {
+    if (player->play_status->mExit) {
         return AVERROR_EOF;
     }
     return 0;
@@ -36,7 +36,7 @@ media_player::media_player() {
 void media_player::open(const char *url) {
     LOGD("media_player open invoked,url:%s\n", url)
     this->url = url;
-    this->play_status = new status();
+    this->play_status = new Status();
     t_read = new std::thread(std::bind(&media_player::read_thread, this));
 }
 
@@ -47,8 +47,8 @@ void media_player::read_thread() {
         return;
     }
     //read packet
-    while (play_status != NULL && !play_status->exit) {
-        if (play_status->pause) {
+    while (play_status != NULL && !play_status->mExit) {
+        if (play_status->mPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -56,13 +56,13 @@ void media_player::read_thread() {
         if (av_read_frame(pFormatCtx, packet) == 0) {
             //音频
             if (packet->stream_index == audio_stream_index) {
-                while (!play_status->exit && play_status->audio_packet_queue->getQueueSize() >=
-                                             play_status->max_packet_queue_size) {
+                while (!play_status->mExit && play_status->mAudioQueue->getQueueSize() >=
+                                             play_status->mMaxQueueSize) {
                     av_usleep(1000 * 5);
                 }
-                if (play_status->exit)
+                if (play_status->mExit)
                     break;
-                play_status->audio_packet_queue->putPacket(packet);
+                play_status->mAudioQueue->putPacket(packet);
                 //视频
             } else {
                 av_packet_free(&packet);
@@ -90,13 +90,13 @@ void media_player::decode_audio() {
     AVFrame *audio_frame = NULL;
     int ret = 0;
 
-    while (play_status != NULL && !play_status->exit) {
-        if (play_status->pause) {
+    while (play_status != NULL && !play_status->mExit) {
+        if (play_status->mPause) {
             av_usleep(1000 * 100);
             continue;
         }
         packet = av_packet_alloc();
-        if (play_status->audio_packet_queue->getPacket(packet) != 0) {
+        if (play_status->mAudioQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
@@ -121,11 +121,11 @@ void media_player::decode_audio() {
                 audio_frame->channels = av_get_channel_layout_nb_channels(
                         audio_frame->channel_layout);
             }
-            while (!play_status->exit &&
+            while (!play_status->mExit &&
                    a_render->audio_frame_queue->getQueueSize() >= a_render->max_frame_queue_size) {
                 av_usleep(1000 * 5);
             }
-            if (play_status->exit) {
+            if (play_status->mExit) {
                 continue;
             }
             a_render->audio_frame_queue->putFrame(audio_frame);
@@ -195,31 +195,31 @@ int media_player::prepare() {
 
 void media_player::play() {
     if (play_status && a_render) {
-        play_status->pause = false;
+        play_status->mPause = false;
         a_render->play();
     }
 }
 
 void media_player::pause() {
     if (play_status && a_render) {
-        play_status->pause = true;
+        play_status->mPause = true;
         a_render->pause();
     }
 }
 
 void media_player::resume() {
     if (play_status && a_render) {
-        play_status->pause = false;
+        play_status->mPause = false;
         a_render->resume();
     }
 }
 
 void media_player::stop() {
     if (play_status) {
-        play_status->load = false;
-        play_status->exit = true;
-        pthread_cond_signal(&play_status->audio_packet_queue->condPacket);
-        pthread_cond_signal(&play_status->video_packet_queue->condPacket);
+        play_status->isLoad = false;
+        play_status->mExit = true;
+        pthread_cond_signal(&play_status->mAudioQueue->condPacket);
+        pthread_cond_signal(&play_status->mVideoQueue->condPacket);
     }
     if (a_render) {
         pthread_cond_signal(&a_render->audio_frame_queue->condPacket);

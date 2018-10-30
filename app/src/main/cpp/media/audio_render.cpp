@@ -4,7 +4,7 @@
 
 #include "audio_render.h"
 
-audio_render::audio_render(status *playStatus, AVCodecContext *codecContext) {
+audio_render::audio_render(Status *playStatus, AVCodecContext *codecContext) {
     this->playStatus = playStatus;
     this->sample_rate = codecContext->sample_rate;
     this->audio_timebase = codecContext->time_base;
@@ -41,20 +41,20 @@ void audio_render::play() {
 
 int audio_render::get_pcm_data() {
     data_size = 0;
-    while (playStatus != NULL && !playStatus->exit) {
+    while (playStatus != NULL && !playStatus->mExit) {
 
         if (audio_frame_queue->getQueueSize() == 0)//加载中
         {
 
-            if (!playStatus->load) {
-                playStatus->load = true;
+            if (!playStatus->isLoad) {
+                playStatus->isLoad = true;
 //                todo
             }
             av_usleep(1000 * 100);
             continue;
         } else {
-            if (playStatus->load) {
-                playStatus->load = false;
+            if (playStatus->isLoad) {
+                playStatus->isLoad = false;
 //                todo
             }
         }

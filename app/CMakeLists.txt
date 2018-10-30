@@ -9,7 +9,7 @@ add_library( # Sets the name of the library.
              src/main/cpp/android/iiplayer_jni.cpp
              src/main/cpp/media/media_player.cpp
              src/main/cpp/media/packet_queue.cpp
-             src/main/cpp/media/status.cpp
+        src/main/cpp/media/Status.cpp
              src/main/cpp/media/util.cpp
              src/main/cpp/media/frame_queue.cpp
              src/main/cpp/media/audio_render.cpp

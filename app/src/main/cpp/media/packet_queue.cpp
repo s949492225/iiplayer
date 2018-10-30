@@ -3,9 +3,9 @@
 //
 
 #include "packet_queue.h"
-#include "status.h"
+#include "Status.h"
 
-packet_queue::packet_queue(status *playStatus) {
+packet_queue::packet_queue(Status *playStatus) {
     this->playStatus = playStatus;
     pthread_mutex_init(&mutexPacket, NULL);
     pthread_cond_init(&condPacket, NULL);
@@ -30,7 +30,7 @@ int packet_queue::putPacket(AVPacket *packet) {
 int packet_queue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mutexPacket);
     int ret = -1;
-    while (playStatus != NULL && !playStatus->exit) {
+    while (playStatus != NULL && !playStatus->mExit) {
         if (queuePacket.size() > 0) {
             AVPacket *avPacket = queuePacket.front();
             if (av_packet_ref(packet, avPacket) == 0) {
