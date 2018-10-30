@@ -15,16 +15,16 @@ extern "C"
 
 class Status;
 
-class frame_queue {
+class FrameQueue {
 public:
-    std::queue<AVFrame *> queuePacket;
-    pthread_mutex_t mutexPacket;
-    pthread_cond_t condPacket;
-    Status *playStatus=NULL;
+    std::queue<AVFrame *> mQueue;
+    pthread_mutex_t mMutex;
+    pthread_cond_t mCond;
+    Status *mStatus=NULL;
 public:
-    frame_queue(Status *playStatus);
+    FrameQueue(Status *status);
 
-    ~frame_queue();
+    ~FrameQueue();
 
     int putFrame(AVFrame *packet);
 

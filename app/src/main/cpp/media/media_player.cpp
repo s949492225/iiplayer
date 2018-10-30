@@ -222,7 +222,7 @@ void media_player::stop() {
         pthread_cond_signal(&play_status->mVideoQueue->mCond);
     }
     if (a_render) {
-        pthread_cond_signal(&a_render->audio_frame_queue->condPacket);
+        pthread_cond_signal(&a_render->audio_frame_queue->mCond);
     }
 
     if (t_read) {

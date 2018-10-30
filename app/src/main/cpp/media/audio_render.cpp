@@ -8,7 +8,7 @@ audio_render::audio_render(Status *playStatus, AVCodecContext *codecContext) {
     this->playStatus = playStatus;
     this->sample_rate = codecContext->sample_rate;
     this->audio_timebase = codecContext->time_base;
-    this->audio_frame_queue = new frame_queue(playStatus);
+    this->audio_frame_queue = new FrameQueue(playStatus);
     this->out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     out_buffer = static_cast<uint8_t *>(av_malloc(static_cast<size_t>(SAMPLE_SIZE)));
     init_swr(codecContext);

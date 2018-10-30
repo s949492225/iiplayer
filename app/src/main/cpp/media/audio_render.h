@@ -6,7 +6,7 @@
 
 #include "Status.h"
 #include <pthread.h>
-#include "frame_queue.h"
+#include "FrameQueue.h"
 #include <unistd.h>
 #include <assert.h>
 
@@ -28,7 +28,7 @@ public:
     uint8_t *out_buffer = NULL;
     int data_size = 0;
     AVRational audio_timebase;
-    frame_queue *audio_frame_queue = NULL;
+    FrameQueue *audio_frame_queue = NULL;
     double clock = 0;//总的播放时长
     double now_time = 0;//当前frame时间
     double last_time = 0; //上一次调用时间
