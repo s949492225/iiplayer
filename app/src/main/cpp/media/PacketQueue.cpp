@@ -72,3 +72,7 @@ void PacketQueue::clearAll() {
     pthread_mutex_unlock(&mMutex);
 }
 
+void PacketQueue::signalAll() {
+    pthread_cond_signal(&mCond);
+}
+

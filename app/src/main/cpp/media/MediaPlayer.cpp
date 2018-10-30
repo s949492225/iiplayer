@@ -217,9 +217,10 @@ void MediaPlayer::stop() {
     if (mStatus) {
         mStatus->isLoad = false;
         mStatus->mExit = true;
-        pthread_cond_signal(&mStatus->mAudioQueue->mCond);
-        pthread_cond_signal(&mStatus->mVideoQueue->mCond);
+        mStatus->mAudioQueue->signalAll();
+        mStatus->mVideoQueue->signalAll();
     }
+
     if (mAudioRender) {
         mAudioRender->notifyWait();
     }
