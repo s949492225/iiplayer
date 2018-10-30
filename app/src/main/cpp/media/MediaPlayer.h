@@ -11,7 +11,7 @@
 #include <condition_variable>
 #include "util.h"
 #include "Status.h"
-#include "audio_render.h"
+#include "AudioRender.h"
 #include <unistd.h>
 #include "time.h"
 
@@ -38,7 +38,7 @@ public:
     //audio
     int mAudioStreamIndex = -1;
     AVCodecContext *mAudioCodecCtx = NULL;
-    audio_render *mAudioRender = NULL;
+    AudioRender *mAudioRender = NULL;
 
     //video
     int mVideoStreamIndex = -1;

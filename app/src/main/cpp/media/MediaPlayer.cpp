@@ -57,7 +57,7 @@ void MediaPlayer::readThread() {
             //音频
             if (packet->stream_index == mAudioStreamIndex) {
                 while (!mStatus->mExit && mStatus->mAudioQueue->getQueueSize() >=
-                                             mStatus->mMaxQueueSize) {
+                                          mStatus->mMaxQueueSize) {
                     av_usleep(1000 * 5);
                 }
                 if (mStatus->mExit)
@@ -87,7 +87,7 @@ void MediaPlayer::decodeAudio() {
     }
 
     AVPacket *packet = NULL;
-    AVFrame *audio_frame = NULL;
+    AVFrame *audioFrame = NULL;
     int ret = 0;
 
     while (mStatus != NULL && !mStatus->mExit) {
@@ -110,25 +110,24 @@ void MediaPlayer::decodeAudio() {
             continue;
         }
 
-        audio_frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mAudioCodecCtx, audio_frame);
+        audioFrame = av_frame_alloc();
+        ret = avcodec_receive_frame(mAudioCodecCtx, audioFrame);
         if (ret == 0) {
 
-            if (audio_frame->channels && audio_frame->channel_layout == 0) {
-                audio_frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
-                        audio_frame->channels));
-            } else if (audio_frame->channels == 0 && audio_frame->channel_layout > 0) {
-                audio_frame->channels = av_get_channel_layout_nb_channels(
-                        audio_frame->channel_layout);
+            if (audioFrame->channels && audioFrame->channel_layout == 0) {
+                audioFrame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
+                        audioFrame->channels));
+            } else if (audioFrame->channels == 0 && audioFrame->channel_layout > 0) {
+                audioFrame->channels = av_get_channel_layout_nb_channels(
+                        audioFrame->channel_layout);
             }
-            while (!mStatus->mExit &&
-                   mAudioRender->audio_frame_queue->getQueueSize() >= mAudioRender->max_frame_queue_size) {
+            while (!mStatus->mExit && mAudioRender->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
             if (mStatus->mExit) {
                 continue;
             }
-            mAudioRender->audio_frame_queue->putFrame(audio_frame);
+            mAudioRender->putFrame(audioFrame);
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
@@ -174,7 +173,7 @@ int MediaPlayer::prepare() {
             if (i != -1) {
                 get_codec_context(parameters, &mAudioCodecCtx);
 
-                mAudioRender = new audio_render(mStatus, mAudioCodecCtx);
+                mAudioRender = new AudioRender(mStatus, mAudioCodecCtx);
                 mAudioStreamIndex = i;
                 mDuration = static_cast<int>(mFormatCtx->duration / AV_TIME_BASE);
             }
@@ -222,7 +221,7 @@ void MediaPlayer::stop() {
         pthread_cond_signal(&mStatus->mVideoQueue->mCond);
     }
     if (mAudioRender) {
-        pthread_cond_signal(&mAudioRender->audio_frame_queue->mCond);
+        mAudioRender->notifyWait();
     }
 
     if (mReadThread) {
