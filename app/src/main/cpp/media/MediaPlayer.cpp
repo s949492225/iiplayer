@@ -5,21 +5,7 @@
 #include "MediaPlayer.h"
 #import  "../android/iiplayer_jni.h"
 
-void MediaPlayer::sendMsg(int type) {
-    if (mMsgSender != NULL) {
-        sendJniMsg(type);
-    }
-}
-
-void MediaPlayer::sendJniMsg(int type) const {
-    JNIEnv *env = get_jni_env();
-    jobject sender = static_cast<jobject>(mMsgSender);
-
-    jclass cls = env->GetObjectClass(sender);
-    jmethodID send_method = env->GetMethodID(cls, "sendEmptyMessage", "(I)Z");
-
-    env->CallBooleanMethod(sender, send_method, type);
-}
+#define NO_ARG -10000
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
@@ -29,19 +15,24 @@ int ioInterruptCallback(void *ctx) {
     return 0;
 }
 
+
 MediaPlayer::MediaPlayer() {
 
 }
 
 void MediaPlayer::open(const char *url) {
-    LOGD("media_player open invoked,url:%s\n", url)
+    if (LOG_DEBUG) {
+        LOGD("media_player open url:%s\n", url)
+    }
     this->mUrl = url;
     this->mStatus = new Status();
     mReadThread = new std::thread(std::bind(&MediaPlayer::readThread, this));
 }
 
 void MediaPlayer::readThread() {
-    LOGD("读取线程启动成功,tid:%i\n", gettid());
+    if (LOG_DEBUG) {
+        LOGD("读取线程启动成功,tid:%i\n", gettid());
+    }
     int error_code = prepare();
     if (error_code < 0) {
         return;
@@ -72,12 +63,12 @@ void MediaPlayer::readThread() {
             //播放完成
             av_packet_free(&packet);
             av_free(packet);
-            LOGD("文件读取结束");
+            if (LOG_DEBUG) {
+                LOGD("文件读取结束\n");
+            }
             break;
         }
     }
-
-
 }
 
 
@@ -85,7 +76,6 @@ void MediaPlayer::decodeAudio() {
     if (LOG_DEBUG) {
         LOGD("音频解码线程开始,tid:%i\n", gettid())
     }
-
     AVPacket *packet = NULL;
     AVFrame *audioFrame = NULL;
     int ret = 0;
@@ -100,6 +90,7 @@ void MediaPlayer::decodeAudio() {
             av_usleep(1000 * 100);
             continue;
         }
+
         packet = av_packet_alloc();
         if (mStatus->mAudioQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
@@ -146,6 +137,7 @@ void MediaPlayer::decodeAudio() {
 
 
 int MediaPlayer::prepare() {
+    sendMsg(ACTION_PLAY_PREPARE);
 
     av_register_all();
     avformat_network_init();
@@ -177,10 +169,11 @@ int MediaPlayer::prepare() {
             //音频解码器
             if (i != -1) {
                 get_codec_context(parameters, &mAudioCodecCtx);
-
-                mAudioRender = new AudioRender(mStatus, mAudioCodecCtx);
+                int64_t sumTime = mFormatCtx->duration;
+                mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx);
                 mAudioStreamIndex = i;
-                mDuration = static_cast<int>(mFormatCtx->duration / AV_TIME_BASE);
+                mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
+                sendMsg(DATA_DURATION, mDuration);
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
@@ -190,7 +183,7 @@ int MediaPlayer::prepare() {
         }
     }
 
-    sendMsg(SUCCESS_PREPARED);
+    sendMsg(ACTION_PLAY_PREPARED);
     //start audio decode thread
     mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
     return 1;
@@ -201,6 +194,7 @@ void MediaPlayer::play() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = false;
         mAudioRender->play();
+        sendMsg(ACTION_PLAY);
     }
 }
 
@@ -208,6 +202,7 @@ void MediaPlayer::pause() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = true;
         mAudioRender->pause();
+        sendMsg(ACTION_PLAY_PAUSE);
     }
 }
 
@@ -215,13 +210,19 @@ void MediaPlayer::resume() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = false;
         mAudioRender->resume();
+        sendMsg(ACTION_PLAY);
     }
 }
 
 void MediaPlayer::seek(int sec) {
-    mStatus->mSeekSec = sec;
+    int rel = 0;
+    if (sec < 0)
+        rel = 0;
+    if (rel > mDuration)
+        rel = mDuration;
+    mStatus->mSeekSec = rel;
     mStatus->isSeek = true;
-
+    sendMsg(ACTION_PLAY_SEEK);
 }
 
 void MediaPlayer::handlerSeek() {
@@ -236,9 +237,16 @@ void MediaPlayer::handlerSeek() {
     avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
 
     mStatus->isSeek = false;
+    sendMsg(ACTION_PLAY);
 }
 
 void MediaPlayer::stop() {
+    release();
+    sendMsg(ACTION_PLAY_STOP);
+}
+
+
+void MediaPlayer::release() {
 
     if (mStatus) {
         mStatus->isLoad = false;
@@ -303,6 +311,51 @@ void MediaPlayer::stop() {
 
 void MediaPlayer::setMsgSender(jobject *sender) {
     mMsgSender = *sender;
+}
+
+void MediaPlayer::sendMsg(int type, int data) {
+    switch (type) {
+        case
+            ERROR_OPEN_FILE
+            ERROR_FIND_STREAM:
+            release();
+            break;
+        default:
+            break;
+    }
+
+    if (mMsgSender != NULL) {
+        sendJniMsg(type, data);
+    }
+}
+
+void MediaPlayer::sendMsg(int type) {
+    if (mMsgSender != NULL) {
+        sendJniMsg(type, NO_ARG);
+    }
+}
+
+void MediaPlayer::sendJniMsg(int type, int data) const {
+    JNIEnv *env = get_jni_env();
+
+    //handler
+    jobject sender = static_cast<jobject>(mMsgSender);
+    jclass cls = env->GetObjectClass(sender);
+    //msg
+    jmethodID obMsgMethod = env->GetMethodID(cls, "obtainMessage", "(I)Landroid/os/Message;");
+    //get msg
+    jobject msg = env->CallObjectMethod(sender, obMsgMethod, type);
+
+    if (data != NO_ARG) {
+        //set arg1=data
+        jclass msgCls = env->GetObjectClass(msg);
+        jfieldID arg1FiledId = env->GetFieldID(msgCls, "arg1", "I");
+        env->SetIntField(msg, arg1FiledId, data);
+    }
+
+    //send
+    jmethodID send_method = env->GetMethodID(cls, "sendMessage", "(Landroid/os/Message;)Z");
+    env->CallBooleanMethod(sender, send_method, msg);
 }
 
 

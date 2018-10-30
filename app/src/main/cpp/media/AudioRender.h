@@ -5,11 +5,11 @@
 #pragma once
 
 #include "Status.h"
-#include <pthread.h>
 #include "FrameQueue.h"
 #include <unistd.h>
 #include <assert.h>
 #include <thread>
+
 
 extern "C" {
 #include <SLES/OpenSLES.h>
@@ -21,13 +21,17 @@ extern "C" {
 };
 #define SAMPLE_SIZE 44100*4
 
+class MediaPlayer;
+
 class AudioRender {
 private:
     Status *mStatus = NULL;
+    MediaPlayer *mPlayer = NULL;
     int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
     AVRational mTimebase;
+    int64_t duration;
     FrameQueue *mQueue = NULL;
     int mMaxQueueSize = 40;
 
@@ -64,10 +68,10 @@ private:
 
     void playThread();
 
-    void friend renderAudio(SLAndroidSimpleBufferQueueItf  __unused queue,void *data);
+    void friend renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *data);
 
 public:
-    AudioRender(Status *status, AVCodecContext *codecContext);
+    AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext);
 
     ~AudioRender();
 

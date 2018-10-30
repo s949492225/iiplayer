@@ -3,13 +3,16 @@
 //
 
 #include "AudioRender.h"
+#include "MediaPlayer.h"
 
-AudioRender::AudioRender(Status *status, AVCodecContext *codecContext) {
-    this->mStatus = status;
-    this->mSampleRate = codecContext->sample_rate;
-    this->mTimebase = codecContext->time_base;
-    this->mQueue = new FrameQueue(status);
-    this->mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext) {
+    mStatus = player->mStatus;
+    mPlayer = player;
+    this->duration = duration;
+    mSampleRate = codecContext->sample_rate;
+    mTimebase = codecContext->time_base;
+    mQueue = new FrameQueue(mStatus);
+    mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
     initSwr(codecContext);
 }
@@ -46,19 +49,24 @@ int AudioRender::getPcmData() {
 
             if (!mStatus->isLoad) {
                 mStatus->isLoad = true;
-//                todo
+                mPlayer->sendMsg(ACTION_PLAY_LOADING);
             }
             av_usleep(1000 * 100);
             continue;
         } else {
             if (mStatus->isLoad) {
                 mStatus->isLoad = false;
-//                todo
+                mPlayer->sendMsg(ACTION_PLAY_LOADING_OVER);
             }
         }
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
+
+            if (frame->pts == duration) {
+                mPlayer->release();
+                mPlayer->sendMsg(ACTION_PLAY_FINISH);
+            }
 
             if (frame->channels && frame->channel_layout == 0) {
                 frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
@@ -73,6 +81,7 @@ int AudioRender::getPcmData() {
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
             mNowTime = frame->pts * av_q2d(mTimebase);
+            mPlayer->sendMsg(DATA_NOW_PLAYING_TIME, (int) mNowTime);
             if (mNowTime < mSumPlayedTime) {
                 mNowTime = mSumPlayedTime;
             }
@@ -91,7 +100,7 @@ int AudioRender::getPcmData() {
     return mOutSize;
 }
 
-void renderAudio(SLAndroidSimpleBufferQueueItf  __unused queue, void *data) {
+void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *data) {
     if (data != NULL) {
         AudioRender &render = *((AudioRender *) data);
         int bufferSize = render.getPcmData();
@@ -208,7 +217,7 @@ void AudioRender::createPlayer() {
     }
     (void) result;
     //缓冲接口回调
-    result = (*mBufferQueue)->RegisterCallback(mBufferQueue, renderAudio, this);
+    result = (*mBufferQueue)->RegisterCallback(mBufferQueue, renderAudioCallBack, this);
     if (result != SL_RESULT_SUCCESS) {
         LOGE("音频渲染出错 RegisterCallback\n");
     }
@@ -219,7 +228,7 @@ void AudioRender::createPlayer() {
         LOGE("音频渲染出错 SetPlayState\n");
     }
     (void) result;
-    renderAudio(mBufferQueue, this);
+    renderAudioCallBack(mBufferQueue, this);
 
 }
 

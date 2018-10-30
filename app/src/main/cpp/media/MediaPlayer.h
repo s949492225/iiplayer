@@ -27,7 +27,6 @@ extern "C" {
 class MediaPlayer {
 private:
 
-    Status *mStatus = NULL;
     std::thread *mReadThread = NULL;
     std::thread *mAudioDecodeThread = NULL;
 
@@ -50,13 +49,12 @@ private:
 
     void decodeAudio();
 
-    void sendMsg(int type);
-
-    void sendJniMsg(int type) const;
+    void sendJniMsg(int type, int data) const;
 
     int friend ioInterruptCallback(void *ctx);
 
 public:
+    Status *mStatus = NULL;
     MediaPlayer();
 
     void open(const char *string);
@@ -68,12 +66,17 @@ public:
     void resume();
 
     void seek(int sec);
-
     void stop();
+    void release();
 
     void setMsgSender(jobject *sender);
 
     void handlerSeek();
+
+    void sendMsg(int type);
+
+    void sendMsg(int type, int data);
+
 };
 
 

@@ -29,7 +29,7 @@ public class IIMediaPlayer {
         mHandler = new Handler(Looper.myLooper(), new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
-                Log.d("IIMediaPlayer", "handleMessage: " + msg.what);
+                Log.d("IIMediaPlayer", "handleMessage: " + msg.what + "  参数:" + msg.arg1);
                 return false;
             }
         });

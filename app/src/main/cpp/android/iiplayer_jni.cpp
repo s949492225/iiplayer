@@ -55,7 +55,7 @@ void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
 static void JNICALL init(JNIEnv *env, jobject obj) {
     MediaPlayer *old_player = get_media_player(env, obj);
     if (old_player) {
-        old_player->stop();
+        old_player->release();
     }
     MediaPlayer *player = new MediaPlayer();
     set_media_player(env, obj, player);
