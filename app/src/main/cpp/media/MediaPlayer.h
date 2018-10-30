@@ -14,6 +14,7 @@
 #include "AudioRender.h"
 #include <unistd.h>
 #include "time.h"
+#include "VideoRender.h"
 
 extern "C" {
 #include "libavutil/time.h"
@@ -29,6 +30,7 @@ private:
 
     std::thread *mReadThread = NULL;
     std::thread *mAudioDecodeThread = NULL;
+    std::thread *mVideoDecodeThread = NULL;
 
     AVFormatContext *mFormatCtx = NULL;
     const char *mUrl = NULL;
@@ -41,6 +43,8 @@ private:
     //video
     int mVideoStreamIndex = -1;
     AVCodecContext *mVideoCodecCtx = NULL;
+    VideoRender *mVideoRender = NULL;
+
     void *mMsgSender = NULL;
 
     int prepare();
@@ -49,12 +53,15 @@ private:
 
     void decodeAudio();
 
+    void decodeVideo();
+
     void sendJniMsg(int type, int data) const;
 
     int friend ioInterruptCallback(void *ctx);
 
 public:
     Status *mStatus = NULL;
+
     MediaPlayer();
 
     void open(const char *string);
@@ -66,7 +73,9 @@ public:
     void resume();
 
     void seek(int sec);
+
     void stop();
+
     void release();
 
     void setMsgSender(jobject *sender);

@@ -29,6 +29,63 @@ void MediaPlayer::open(const char *url) {
     mReadThread = new std::thread(std::bind(&MediaPlayer::readThread, this));
 }
 
+
+int MediaPlayer::prepare() {
+    sendMsg(ACTION_PLAY_PREPARE);
+
+    av_register_all();
+    avformat_network_init();
+
+    mFormatCtx = avformat_alloc_context();
+    mFormatCtx->interrupt_callback.callback = ioInterruptCallback;
+    mFormatCtx->interrupt_callback.opaque = this;
+
+    int error = avformat_open_input(&mFormatCtx, mUrl, NULL, NULL);
+    if (error != 0) {
+        if (LOG_DEBUG) {
+            LOGE("can not open url %s", mUrl);
+        }
+        sendMsg(ERROR_OPEN_FILE);
+        return -1;
+    }
+
+    if (avformat_find_stream_info(mFormatCtx, NULL) < 0) {
+        if (LOG_DEBUG) {
+            LOGE("can not find steams from %s", mUrl);
+        }
+        sendMsg(ERROR_FIND_STREAM);
+        return -1;
+    }
+    //流信息获取
+    for (int i = 0; i < mFormatCtx->nb_streams; i++) {
+        AVCodecParameters *parameters = mFormatCtx->streams[i]->codecpar;
+        if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
+            //音频解码器
+            if (i != -1) {
+                get_codec_context(parameters, &mAudioCodecCtx);
+                int64_t sumTime = mFormatCtx->duration;
+                mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx);
+                mAudioStreamIndex = i;
+                mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
+                sendMsg(DATA_DURATION, mDuration);
+            }
+        } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
+            if (i != -1) {
+                get_codec_context(parameters, &mVideoCodecCtx);
+                mVideoRender = new VideoRender();
+                mVideoStreamIndex = i;
+            }
+        }
+    }
+
+    sendMsg(ACTION_PLAY_PREPARED);
+    //start audio decode thread
+    mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
+    mVideoDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeVideo, this));
+    return 1;
+}
+
+
 void MediaPlayer::readThread() {
     if (LOG_DEBUG) {
         LOGD("读取线程启动成功,tid:%i\n", gettid());
@@ -39,6 +96,11 @@ void MediaPlayer::readThread() {
     }
     //read packet
     while (mStatus != NULL && !mStatus->isExit) {
+
+        if (mStatus->isSeek) {
+            handlerSeek();
+        }
+
         if (mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
@@ -71,6 +133,57 @@ void MediaPlayer::readThread() {
     }
 }
 
+void MediaPlayer::decodeVideo() {
+    if (LOG_DEBUG) {
+        LOGD("视频解码线程开始,tid:%i\n", gettid())
+    }
+    AVPacket *packet = NULL;
+    AVFrame *frame = NULL;
+    int ret = 0;
+
+    while (mStatus != NULL && !mStatus->isExit) {
+
+        if (mStatus->isPause) {
+            av_usleep(1000 * 100);
+            continue;
+        }
+
+        packet = av_packet_alloc();
+        if (mStatus->mVideoQueue->getPacket(packet) != 0) {
+            av_packet_free(&packet);
+            av_free(packet);
+            packet = NULL;
+            continue;
+        }
+        ret = avcodec_send_packet(mVideoCodecCtx, packet);
+        if (ret != 0) {
+            av_packet_free(&packet);
+            av_free(packet);
+            packet = NULL;
+            continue;
+        }
+
+        frame = av_frame_alloc();
+        ret = avcodec_receive_frame(mVideoCodecCtx, frame);
+        if (ret == 0) {
+
+            while (!mStatus->isExit && mVideoRender->isQueueFull()) {
+                av_usleep(1000 * 5);
+            }
+            if (mStatus->isExit) {
+                continue;
+            }
+            mVideoRender->putFrame(frame);
+            av_packet_free(&packet);
+            av_free(packet);
+            packet = NULL;
+        } else {
+            av_packet_free(&packet);
+            av_free(packet);
+            packet = NULL;
+        }
+    }
+}
 
 void MediaPlayer::decodeAudio() {
     if (LOG_DEBUG) {
@@ -81,10 +194,6 @@ void MediaPlayer::decodeAudio() {
     int ret = 0;
 
     while (mStatus != NULL && !mStatus->isExit) {
-
-        if (mStatus->isSeek) {
-            handlerSeek();
-        }
 
         if (mStatus->isPause) {
             av_usleep(1000 * 100);
@@ -133,60 +242,6 @@ void MediaPlayer::decodeAudio() {
             packet = NULL;
         }
     }
-}
-
-
-int MediaPlayer::prepare() {
-    sendMsg(ACTION_PLAY_PREPARE);
-
-    av_register_all();
-    avformat_network_init();
-
-    mFormatCtx = avformat_alloc_context();
-    mFormatCtx->interrupt_callback.callback = ioInterruptCallback;
-    mFormatCtx->interrupt_callback.opaque = this;
-
-    int error = avformat_open_input(&mFormatCtx, mUrl, NULL, NULL);
-    if (error != 0) {
-        if (LOG_DEBUG) {
-            LOGE("can not open url %s", mUrl);
-        }
-        sendMsg(ERROR_OPEN_FILE);
-        return -1;
-    }
-
-    if (avformat_find_stream_info(mFormatCtx, NULL) < 0) {
-        if (LOG_DEBUG) {
-            LOGE("can not find steams from %s", mUrl);
-        }
-        sendMsg(ERROR_FIND_STREAM);
-        return -1;
-    }
-    //流信息获取
-    for (int i = 0; i < mFormatCtx->nb_streams; i++) {
-        AVCodecParameters *parameters = mFormatCtx->streams[i]->codecpar;
-        if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
-            //音频解码器
-            if (i != -1) {
-                get_codec_context(parameters, &mAudioCodecCtx);
-                int64_t sumTime = mFormatCtx->duration;
-                mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx);
-                mAudioStreamIndex = i;
-                mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
-                sendMsg(DATA_DURATION, mDuration);
-            }
-        } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
-            if (i != -1) {
-                get_codec_context(parameters, &mVideoCodecCtx);
-                mVideoStreamIndex = i;
-            }
-        }
-    }
-
-    sendMsg(ACTION_PLAY_PREPARED);
-    //start audio decode thread
-    mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
-    return 1;
 }
 
 
@@ -269,6 +324,13 @@ void MediaPlayer::release() {
         delete mAudioDecodeThread;
         mAudioDecodeThread = NULL;
     }
+
+    if (mVideoDecodeThread) {
+        mVideoDecodeThread->join();
+        delete mVideoDecodeThread;
+        mVideoDecodeThread = NULL;
+    }
+
     if (mAudioRender != NULL) {
         delete mAudioRender;
         mAudioRender = NULL;
