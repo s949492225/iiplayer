@@ -5,8 +5,8 @@
 #include "Status.h"
 
 Status::Status() {
-    mAudioQueue = new packet_queue(this);
-    mVideoQueue = new packet_queue(this);
+    mAudioQueue = new PacketQueue(this);
+    mVideoQueue = new PacketQueue(this);
 }
 
 Status::~Status() {

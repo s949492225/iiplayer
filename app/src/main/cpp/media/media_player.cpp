@@ -218,8 +218,8 @@ void media_player::stop() {
     if (play_status) {
         play_status->isLoad = false;
         play_status->mExit = true;
-        pthread_cond_signal(&play_status->mAudioQueue->condPacket);
-        pthread_cond_signal(&play_status->mVideoQueue->condPacket);
+        pthread_cond_signal(&play_status->mAudioQueue->mCond);
+        pthread_cond_signal(&play_status->mVideoQueue->mCond);
     }
     if (a_render) {
         pthread_cond_signal(&a_render->audio_frame_queue->condPacket);

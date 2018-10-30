@@ -16,16 +16,16 @@ extern "C"
 
 class Status;
 
-class packet_queue {
+class PacketQueue {
 public:
-    std::queue<AVPacket *> queuePacket;
-    pthread_mutex_t mutexPacket;
-    pthread_cond_t condPacket;
-    Status *playStatus = NULL;
+    std::queue<AVPacket *> mQueue;
+    pthread_mutex_t mMutex;
+    pthread_cond_t mCond;
+    Status *mStatus = NULL;
 public:
-    packet_queue(Status *playStatus);
+    PacketQueue(Status *status);
 
-    ~packet_queue();
+    ~PacketQueue();
 
     int putPacket(AVPacket *packet);
 

@@ -5,7 +5,7 @@
 #ifndef IIPLAYER_STATUS_H
 #define IIPLAYER_STATUS_H
 
-#include "packet_queue.h"
+#include "PacketQueue.h"
 
 class Status {
 public:
@@ -15,8 +15,8 @@ public:
 
     bool mExit = false;
     bool mPause = true;
-    packet_queue *mAudioQueue = NULL;
-    packet_queue *mVideoQueue = NULL;
+    PacketQueue *mAudioQueue = NULL;
+    PacketQueue *mVideoQueue = NULL;
     int mMaxQueueSize = 40;
     bool isSeek = false;
     bool isLoad = false;
