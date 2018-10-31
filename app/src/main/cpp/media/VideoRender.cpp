@@ -4,11 +4,11 @@
 #include "VideoRender.h"
 #import "MediaPlayer.h"
 
-VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, void *render) {
+VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext,AVRational timebase, void *render) {
     mPlayer = player;
     mStatus = player->mStatus;
     mPixFmt = codecContext->pix_fmt;
-    mTimebase = codecContext->time_base;
+    mTimebase = timebase;
     mQueue = new FrameQueue(mStatus);
     mGLRender = render;
     mWidth = codecContext->width;

@@ -4,12 +4,12 @@
 #include "AudioRender.h"
 #include "MediaPlayer.h"
 
-AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext) {
+AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext,AVRational timebase) {
     mStatus = player->mStatus;
     mPlayer = player;
     this->duration = duration;
     mSampleRate = codecContext->sample_rate;
-    mTimebase = codecContext->time_base;
+    mTimebase = timebase;
     mQueue = new FrameQueue(mStatus);
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));

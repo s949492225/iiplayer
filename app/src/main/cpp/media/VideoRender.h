@@ -26,7 +26,7 @@ class MediaPlayer;
 class VideoRender {
 public:
 
-    VideoRender(MediaPlayer *player, AVCodecContext *codecContext, void *render);
+    VideoRender(MediaPlayer *player, AVCodecContext *codecContext,AVRational timebase, void *render);
     ~VideoRender();
     Status *mStatus = NULL;
     MediaPlayer *mPlayer = NULL;

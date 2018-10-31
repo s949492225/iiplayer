@@ -63,7 +63,8 @@ int MediaPlayer::prepare() {
             if (i != -1) {
                 get_codec_context(parameters, &mAudioCodecCtx);
                 int64_t sumTime = mFormatCtx->duration;
-                mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx);
+                mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx,
+                                               mFormatCtx->streams[i]->time_base);
                 mAudioStreamIndex = i;
                 mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
                 sendMsg(DATA_DURATION, mDuration);
@@ -71,7 +72,8 @@ int MediaPlayer::prepare() {
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
                 get_codec_context(parameters, &mVideoCodecCtx);
-                mVideoRender = new VideoRender(this, mVideoCodecCtx, mGLRender);
+                mVideoRender = new VideoRender(this, mVideoCodecCtx,
+                                               mFormatCtx->streams[i]->time_base, mGLRender);
                 mVideoStreamIndex = i;
             }
         }

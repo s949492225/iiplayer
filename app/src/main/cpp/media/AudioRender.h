@@ -71,7 +71,7 @@ private:
 public:
     MediaPlayer *mPlayer = NULL;
 
-    AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext);
+    AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext,AVRational timebase);
 
     ~AudioRender();
 
