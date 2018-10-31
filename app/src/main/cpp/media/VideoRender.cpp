@@ -30,7 +30,7 @@ void VideoRender::playThread() {
                 mStatus->isLoad = true;
                 mPlayer->sendMsg(ACTION_PLAY_LOADING);
             }
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 5);
             continue;
         } else {
             if (mStatus->isLoad) {

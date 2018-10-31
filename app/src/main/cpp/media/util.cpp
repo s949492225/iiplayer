@@ -4,8 +4,27 @@
 
 #include "util.h"
 
-int get_codec_context(AVCodecParameters *codecpar, AVCodecContext **avCodecContext) {
-    AVCodec *dec = avcodec_find_decoder(codecpar->codec_id);
+int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext) {
+    AVCodec *dec;
+    if (codecParam->codec_type == AVMEDIA_TYPE_VIDEO) {
+        switch (codecParam->codec_id) {
+            case AV_CODEC_ID_H264:
+                dec = avcodec_find_decoder_by_name("h264_mediacodec");//硬解码264
+                break;
+            case AV_CODEC_ID_MPEG4:
+                dec = avcodec_find_decoder_by_name("mpeg4_mediacodec");//硬解码mpeg4
+                break;
+            case AV_CODEC_ID_HEVC:
+                dec = avcodec_find_decoder_by_name("hevc_mediacodec");//硬解码265
+                break;
+            default:
+                dec = avcodec_find_decoder(codecParam->codec_id);//软解
+                break;
+        }
+    } else {
+        dec = avcodec_find_decoder(codecParam->codec_id);//软解
+    }
+
     if (!dec) {
         if (LOG_DEBUG) {
             LOGE("can not find decoder");
@@ -21,15 +40,15 @@ int get_codec_context(AVCodecParameters *codecpar, AVCodecContext **avCodecConte
         return -1;
     }
 
-    if (avcodec_parameters_to_context(*avCodecContext, codecpar) < 0) {
+    if (avcodec_parameters_to_context(*avCodecContext, codecParam) < 0) {
         if (LOG_DEBUG) {
             LOGE("can not fill codectx");
         }
         return -1;
     }
 
-
-    if (avcodec_open2(*avCodecContext, dec, 0) != 0) {
+    int ret = avcodec_open2(*avCodecContext, dec, 0);
+    if (ret != 0) {
         if (LOG_DEBUG) {
             LOGE("can not open decoder");
         }

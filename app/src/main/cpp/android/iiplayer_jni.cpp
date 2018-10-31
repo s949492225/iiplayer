@@ -6,6 +6,11 @@
 #include "android_log.h"
 #include "../media/MediaPlayer.h"
 
+extern "C" {
+#include <libavcodec/jni.h>
+}
+
+
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
 jfieldID get_player_native_player_field(JNIEnv *env) {
@@ -127,6 +132,8 @@ static const JNINativeMethod g_methods[] = {
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
+    av_jni_set_java_vm(vm, reserved);
+
     JNIEnv *env = NULL;
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4) != JNI_OK) {
         __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:GetEnv failed\n");

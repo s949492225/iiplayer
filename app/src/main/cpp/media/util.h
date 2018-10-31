@@ -26,6 +26,6 @@ extern "C" {
 
 #include "../android/android_log.h"
 
-int get_codec_context(AVCodecParameters *codecpar, AVCodecContext **avCodecContext);
+int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext);
 
 #endif //IIPLAYER_UTIL_H
