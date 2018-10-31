@@ -5,6 +5,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.syiyi.player.opengl.Render;
+
 
 @SuppressWarnings("WeakerAccess")
 public class IIMediaPlayer {
@@ -13,6 +15,7 @@ public class IIMediaPlayer {
     private long mNativePlayer;
     private Handler mHandler;
     private OnPrepareListener mPrepareListener;
+    private Render mRender;
 
     protected static class Code {
         static final int ERROR_OPEN_FILE = -1;
@@ -42,7 +45,7 @@ public class IIMediaPlayer {
         System.loadLibrary("swscale");
     }
 
-    public static interface OnPrepareListener {
+    public interface OnPrepareListener {
         void onPrepared();
     }
 
@@ -53,6 +56,10 @@ public class IIMediaPlayer {
 
     public void setDataSource(String url) {
         this.url = url;
+    }
+
+    public void setRender(Render mRender) {
+        this.mRender = mRender;
     }
 
     public void prepareAsync(OnPrepareListener listener) {

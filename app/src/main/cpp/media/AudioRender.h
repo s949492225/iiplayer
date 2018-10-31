@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <thread>
 
-
 extern "C" {
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -26,7 +25,6 @@ class MediaPlayer;
 class AudioRender {
 private:
     Status *mStatus = NULL;
-    MediaPlayer *mPlayer = NULL;
     int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
@@ -64,13 +62,15 @@ private:
 
     int getPcmData();
 
-    void initSwr(AVCodecContext *context);
+    void initSwrCtx(AVCodecContext *context);
 
     void playThread();
 
     void friend renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *data);
 
 public:
+    MediaPlayer *mPlayer = NULL;
+
     AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext);
 
     ~AudioRender();

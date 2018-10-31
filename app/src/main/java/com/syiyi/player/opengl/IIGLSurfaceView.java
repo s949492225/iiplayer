@@ -18,12 +18,7 @@ public class IIGLSurfaceView extends TextureView {
         setSurfaceTextureListener(render);
     }
 
-    public void setYUVData(int width, int height, byte[] y, byte[] u, byte[] v)
-    {
-        if(render != null)
-        {
-            render.setYUVRenderData(width, height, y, u, v);
-        }
+    public Render getRender() {
+        return render;
     }
-
 }

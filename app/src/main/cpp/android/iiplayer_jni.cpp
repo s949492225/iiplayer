@@ -20,6 +20,12 @@ jobject get_player_handler(JNIEnv *env, jobject obj) {
     return send_obj;
 }
 
+jobject get_player_gl_render(JNIEnv *env, jobject obj) {
+    jclass jcs = env->FindClass(IIMediaPlayer);
+    jfieldID rend_id = env->GetFieldID(jcs, "mRender", "Lcom/syiyi/player/opengl/Render;");
+    return env->GetObjectField(obj, rend_id);
+}
+
 MediaPlayer *get_media_player(JNIEnv *env, jobject obj) {
     jfieldID jfd = get_player_native_player_field(env);
     return reinterpret_cast<MediaPlayer *>(env->GetLongField(obj, jfd));
@@ -41,6 +47,8 @@ void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
         jobject handler = env->NewGlobalRef(get_player_handler(env, obj));
         player->setMsgSender(&handler);
 
+        jobject render = env->NewGlobalRef(get_player_gl_render(env, obj));
+        player->setGLRender(&render);
         env->SetLongField(obj, jfd, (jlong) player);
     } else {
         env->SetLongField(obj, jfd, 0);

@@ -3,7 +3,6 @@
 //
 
 #include "MediaPlayer.h"
-#import  "../android/iiplayer_jni.h"
 
 #define NO_ARG -10000
 
@@ -72,7 +71,7 @@ int MediaPlayer::prepare() {
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
                 get_codec_context(parameters, &mVideoCodecCtx);
-                mVideoRender = new VideoRender();
+                mVideoRender = new VideoRender(this, mVideoCodecCtx, mGLRender);
                 mVideoStreamIndex = i;
             }
         }
@@ -287,6 +286,8 @@ void MediaPlayer::handlerSeek() {
     mAudioRender->clearQueue();
     mAudioRender->resetTime();
 
+    mVideoRender->clearQueue();
+
     //seek io
     int64_t rel = mStatus->mSeekSec * AV_TIME_BASE;
     avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
@@ -314,11 +315,16 @@ void MediaPlayer::release() {
         mAudioRender->notifyWait();
     }
 
+    if (mVideoRender) {
+        mVideoRender->notifyWait();
+    }
+
     if (mReadThread) {
         mReadThread->join();
         delete mReadThread;
         mReadThread = NULL;
     }
+
     if (mAudioDecodeThread) {
         mAudioDecodeThread->join();
         delete mAudioDecodeThread;
@@ -334,6 +340,11 @@ void MediaPlayer::release() {
     if (mAudioRender != NULL) {
         delete mAudioRender;
         mAudioRender = NULL;
+    }
+
+    if (mVideoRender != NULL) {
+        delete mVideoRender;
+        mVideoRender = NULL;
     }
 
     if (mStatus != NULL) {
@@ -373,6 +384,10 @@ void MediaPlayer::release() {
 
 void MediaPlayer::setMsgSender(jobject *sender) {
     mMsgSender = *sender;
+}
+
+void MediaPlayer::setGLRender(jobject *render) {
+    mGLRender = *render;
 }
 
 void MediaPlayer::sendMsg(int type, int data) {

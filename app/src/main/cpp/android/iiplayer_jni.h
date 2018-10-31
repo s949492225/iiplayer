@@ -6,7 +6,6 @@
 #define IIPLAYER_IIPLAYER_JNI_H
 
 #include <jni.h>
-#include "../media/MediaPlayer.h"
 
 JNIEXPORT JavaVM *get_jni_jvm(void);
 

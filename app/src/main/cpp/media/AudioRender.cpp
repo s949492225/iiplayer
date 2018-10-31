@@ -1,4 +1,3 @@
-#include <tar.h>//
 // Created by 宋林涛 on 2018/9/28.
 //
 
@@ -14,10 +13,10 @@ AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *
     mQueue = new FrameQueue(mStatus);
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
-    initSwr(codecContext);
+    initSwrCtx(codecContext);
 }
 
-void AudioRender::initSwr(AVCodecContext *context) {
+void AudioRender::initSwrCtx(AVCodecContext *context) {
     mSwrCtx = swr_alloc();
     swr_alloc_set_opts(mSwrCtx,
                        AV_CH_LAYOUT_STEREO,
@@ -86,6 +85,7 @@ int AudioRender::getPcmData() {
                 mNowTime = mSumPlayedTime;
             }
             mSumPlayedTime = mNowTime;
+            mPlayer->mPlayTime = mSumPlayedTime;
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
@@ -106,6 +106,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
         int bufferSize = render.getPcmData();
         if (bufferSize > 0) {
             render.mSumPlayedTime += bufferSize / ((double) SAMPLE_SIZE);
+            render.mPlayer->mPlayTime = render.mSumPlayedTime;
             if (render.mSumPlayedTime - render.mLastTime >= 0.1) {
                 render.mLastTime = render.mSumPlayedTime;
                 //回调应用层

@@ -12,9 +12,10 @@
 #include "util.h"
 #include "Status.h"
 #include "AudioRender.h"
+#include  "VideoRender.h"
+#include  "../android/iiplayer_jni.h"
 #include <unistd.h>
 #include "time.h"
-#include "VideoRender.h"
 
 extern "C" {
 #include "libavutil/time.h"
@@ -47,6 +48,8 @@ private:
 
     void *mMsgSender = NULL;
 
+    void *mGLRender = NULL;
+
     int prepare();
 
     void readThread();
@@ -61,6 +64,7 @@ private:
 
 public:
     Status *mStatus = NULL;
+    double mPlayTime = 0;
 
     MediaPlayer();
 
@@ -86,6 +90,7 @@ public:
 
     void sendMsg(int type, int data);
 
+    void setGLRender(jobject *sender);
 };
 
 
