@@ -2,6 +2,7 @@ package com.syiyi.player.opengl;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.opengl.EGL14;
 import android.opengl.GLES20;
 import android.view.TextureView;
 
@@ -11,12 +12,24 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-public class Render implements TextureView.SurfaceTextureListener {
+import javax.microedition.khronos.egl.EGL10;
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.egl.EGLContext;
+import javax.microedition.khronos.egl.EGLDisplay;
+import javax.microedition.khronos.egl.EGLSurface;
 
 
+public class Render implements TextureView.SurfaceTextureListener, SurfaceTexture.OnFrameAvailableListener, Runnable {
+    private SurfaceTexture mSrcTexture;
+    private SurfaceTexture mVideoTexture;
+    private EGL10 mEgl = null;
+    private EGLDisplay mEGLDisplay = EGL10.EGL_NO_DISPLAY;
+    private EGLContext mEGLContext = EGL10.EGL_NO_CONTEXT;
+    private EGLConfig[] mEGLConfig = new EGLConfig[1];
+    private EGLSurface mEglSurface;
     private Context context;
 
-    private final float[] vertexData = {
+    private final static float[] vertexData = {
 
             -1f, -1f,
             1f, -1f,
@@ -25,7 +38,7 @@ public class Render implements TextureView.SurfaceTextureListener {
 
     };
 
-    private final float[] textureData = {
+    private final static float[] textureData = {
             0f, 1f,
             1f, 1f,
             0f, 0f,
@@ -49,8 +62,13 @@ public class Render implements TextureView.SurfaceTextureListener {
     private ByteBuffer u;
     private ByteBuffer v;
 
+    private float[] videoTextureTransform;
+    private volatile boolean frameAvailable = false;
+    private volatile boolean isExit = false;
+    private volatile int surfaceWidth = 0;
+    private volatile int surfaceHeight = 0;
 
-    public Render(Context context) {
+    Render(Context context) {
         this.context = context;
         vertexBuffer = ByteBuffer.allocateDirect(vertexData.length * 4)
                 .order(ByteOrder.nativeOrder())
@@ -63,10 +81,74 @@ public class Render implements TextureView.SurfaceTextureListener {
                 .asFloatBuffer()
                 .put(textureData);
         textureBuffer.position(0);
+
+        videoTextureTransform = new float[16];
     }
 
+    private void initEGL() {
+        //获取系统的EGL对象
+        mEgl = (EGL10) EGLContext.getEGL();
 
-    private void initRenderYUV() {
+        //获取显示设备
+        mEGLDisplay = mEgl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
+        if (mEGLDisplay == EGL10.EGL_NO_DISPLAY) {
+            throw new RuntimeException("eglGetDisplay failed! " + mEgl.eglGetError());
+        }
+
+        //version中存放当前的EGL版本号，版本号即为version[0].version[1]，如1.0
+        int[] version = new int[2];
+
+        //初始化EGL
+        if (!mEgl.eglInitialize(mEGLDisplay, version)) {
+            throw new RuntimeException("eglInitialize failed! " + mEgl.eglGetError());
+        }
+
+        //构造需要的配置列表
+        int[] attributes = {
+                //颜色缓冲区所有颜色分量的位数
+                EGL10.EGL_BUFFER_SIZE, 32,
+                //颜色缓冲区R、G、B、A分量的位数
+                EGL10.EGL_RED_SIZE, 8,
+                EGL10.EGL_GREEN_SIZE, 8,
+                EGL10.EGL_BLUE_SIZE, 8,
+                EGL10.EGL_ALPHA_SIZE, 8,
+                EGL10.EGL_NONE
+        };
+        int[] configsNum = new int[1];
+
+        //EGL根据attributes选择最匹配的配置
+        if (!mEgl.eglChooseConfig(mEGLDisplay, attributes, mEGLConfig, 1, configsNum)) {
+            throw new RuntimeException("eglChooseConfig failed! " + mEgl.eglGetError());
+        }
+
+        //如本文开始所讲的，获取TextureView内置的SurfaceTexture作为EGL的绘图表面，也就是跟系统屏幕打交道
+        SurfaceTexture surfaceTexture = mSrcTexture;
+        if (surfaceTexture == null)
+            return;
+
+        //根据SurfaceTexture创建EGL绘图表面
+        mEglSurface = mEgl.eglCreateWindowSurface(mEGLDisplay, mEGLConfig[0], surfaceTexture, null);
+
+        //指定哪个版本的OpenGL ES上下文，本文为OpenGL ES 2.0
+        int[] contextAttribs = {
+                EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
+                EGL10.EGL_NONE
+        };
+        //创建上下文，EGL10.EGL_NO_CONTEXT表示不和别的上下文共享资源
+        mEGLContext = mEgl.eglCreateContext(mEGLDisplay, mEGLConfig[0], EGL10.EGL_NO_CONTEXT, contextAttribs);
+
+        if (mEGLDisplay == EGL10.EGL_NO_DISPLAY || mEGLContext == EGL10.EGL_NO_CONTEXT) {
+            throw new RuntimeException("eglCreateContext fail failed! " + mEgl.eglGetError());
+        }
+
+        //指定mEGLContext为当前系统的EGL上下文，你可能发现了使用两个mEglSurface，第一个表示绘图表面，第二个表示读取表面
+        if (!mEgl.eglMakeCurrent(mEGLDisplay, mEglSurface, mEglSurface, mEGLContext)) {
+            throw new RuntimeException("eglMakeCurrent failed! " + mEgl.eglGetError());
+        }
+
+    }
+
+    private void initTexture() {
         String vertexSource = ShaderUtil.readRawTxt(context, R.raw.vertex_shader);
         String fragmentSource = ShaderUtil.readRawTxt(context, R.raw.fragment_shader);
         program_yuv = ShaderUtil.createProgram(vertexSource, fragmentSource);
@@ -89,16 +171,29 @@ public class Render implements TextureView.SurfaceTextureListener {
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         }
+
+        mVideoTexture = new SurfaceTexture(textureId_yuv[0]);
+        mVideoTexture.setOnFrameAvailableListener(this);
+        mVideoTexture.updateTexImage();
     }
 
+    @SuppressWarnings("unused")
     public void setYUVRenderData(int width, int height, byte[] y, byte[] u, byte[] v) {
         this.width_yuv = width;
         this.height_yuv = height;
         this.y = ByteBuffer.wrap(y);
         this.u = ByteBuffer.wrap(u);
         this.v = ByteBuffer.wrap(v);
+        frameAvailable = true;
+    }
 
+    private void onDrawFrame() {
+        GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         renderYUV();
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+
     }
 
     private void renderYUV() {
@@ -138,24 +233,46 @@ public class Render implements TextureView.SurfaceTextureListener {
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        initRenderYUV();
+        mSrcTexture = surface;
+        surfaceWidth = width;
+        surfaceHeight = height;
+        new Thread(this).start();
+
     }
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        GLES20.glViewport(0, 0, width, height);
+        surfaceWidth = width;
+        surfaceHeight = height;
     }
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+
         return false;
     }
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        renderYUV();
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    @Override
+    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+    }
+
+    @Override
+    public void run() {
+        initEGL();
+        initTexture();
+        while (!isExit) {
+            if (frameAvailable) {
+                mEgl.eglMakeCurrent(mEGLDisplay, mEglSurface, mEglSurface, mEGLContext);
+                mVideoTexture.updateTexImage();
+                mVideoTexture.getTransformMatrix(videoTextureTransform);
+                onDrawFrame();
+                mEgl.eglSwapBuffers(mEGLDisplay, mEglSurface);
+                frameAvailable = false;
+            }
+        }
     }
 }

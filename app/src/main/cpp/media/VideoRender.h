@@ -40,7 +40,6 @@ public:
     FrameQueue *mQueue = NULL;
     int mMaxQueueSize = 40;
     AVRational mTimebase;
-    SwsContext *mSwsCtx = NULL;
     std::thread *mPlayThread = NULL;
 
     void putFrame(AVFrame *frame);
@@ -58,8 +57,6 @@ public:
     double getFrameDiffTime(AVFrame *avFrame);
 
     double getDelayTime(double diff);
-
-    void initSwsCtx();
 
     void renderFrame(const AVFrame *yuvFrame) const;
 };

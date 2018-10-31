@@ -13,23 +13,11 @@ VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, void
     mGLRender = render;
     mWidth = codecContext->width;
     mHeight = codecContext->height;
-    initSwsCtx();
 
 }
 
 void VideoRender::play() {
     mPlayThread = new std::thread(std::bind(&VideoRender::playThread, this));
-}
-
-void VideoRender::initSwsCtx() {
-    mSwsCtx = sws_getContext(
-            mWidth,
-            mHeight,
-            mPixFmt,
-            mWidth,
-            mHeight,
-            AV_PIX_FMT_YUV420P,
-            SWS_BICUBIC, NULL, NULL, NULL);
 }
 
 void VideoRender::playThread() {
@@ -38,7 +26,6 @@ void VideoRender::playThread() {
 
         if (mQueue->getQueueSize() == 0)//加载中
         {
-
             if (!mStatus->isLoad) {
                 mStatus->isLoad = true;
                 mPlayer->sendMsg(ACTION_PLAY_LOADING);
@@ -51,56 +38,72 @@ void VideoRender::playThread() {
                 mPlayer->sendMsg(ACTION_PLAY_LOADING_OVER);
             }
         }
+
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
-
-            AVFrame *yuvFrame = av_frame_alloc();
-            int num = av_image_get_buffer_size(
-                    AV_PIX_FMT_YUV420P,
-                    mWidth,
-                    mHeight,
-                    1);
-            uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-            av_image_fill_arrays(
-                    yuvFrame->data,
-                    yuvFrame->linesize,
-                    buffer,
-                    AV_PIX_FMT_YUV420P,
-                    mWidth,
-                    mWidth,
-                    1);
-            sws_scale(
-                    mSwsCtx,
-                    (const uint8_t *const *) (frame->data),
-                    frame->linesize,
-                    0,
-                    frame->height,
-                    yuvFrame->data,
-                    yuvFrame->linesize);
-
             double diff = getFrameDiffTime(frame);
             av_usleep((unsigned int) getDelayTime(diff) * 1000000);
             if (mStatus == NULL || mStatus->isExit) {
+                av_frame_free(&frame);
                 break;
             }
 
-//            renderFrame(yuvFrame);
+            if (frame->format == AV_PIX_FMT_YUV420P) {
+                renderFrame(frame);
+            } else {
+                AVFrame *yuvFrame = av_frame_alloc();
+                int num = av_image_get_buffer_size(
+                        AV_PIX_FMT_YUV420P,
+                        mWidth,
+                        mHeight,
+                        1);
 
-            av_free(buffer);
+                uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
 
-            av_frame_free(&yuvFrame);
-            av_free(yuvFrame);
-            yuvFrame = NULL;
+                av_image_fill_arrays(
+                        yuvFrame->data,
+                        yuvFrame->linesize,
+                        buffer,
+                        AV_PIX_FMT_YUV420P,
+                        mWidth,
+                        mWidth,
+                        1);
 
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
-        } else {
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
+                SwsContext *swsCtx = sws_getContext(
+                        mWidth,
+                        mHeight,
+                        mPixFmt,
+                        mWidth,
+                        mHeight,
+                        AV_PIX_FMT_YUV420P,
+                        SWS_BICUBIC, NULL, NULL, NULL);
+
+                if (!swsCtx) {
+                    av_frame_free(&frame);
+                    av_frame_free(&yuvFrame);
+                    av_free(buffer);
+                    continue;
+                }
+
+                sws_scale(
+                        swsCtx,
+                        (const uint8_t *const *) (frame->data),
+                        frame->linesize,
+                        0,
+                        frame->height,
+                        yuvFrame->data,
+                        yuvFrame->linesize);
+
+                renderFrame(yuvFrame);
+
+                av_frame_free(&yuvFrame);
+                av_free(buffer);
+                sws_freeContext(swsCtx);
+            }
         }
+        av_frame_free(&frame);
+
     }
 
 }
@@ -123,7 +126,7 @@ void VideoRender::renderFrame(const AVFrame *yuvFrame) const {
 
 
     jclass jcs = env->GetObjectClass(static_cast<jobject>(mGLRender));
-    jmethodID jmid = env->GetMethodID(jcs, "setYUVRenderData", "");
+    jmethodID jmid = env->GetMethodID(jcs, "setYUVRenderData", "(II[B[B[B)V");
     env->CallVoidMethod(static_cast<jobject>(mGLRender), jmid, mWidth, mHeight, y, u, v);
 
     env->DeleteLocalRef(y);
@@ -201,11 +204,6 @@ VideoRender::~VideoRender() {
     if (mPlayThread != NULL) {
         mPlayThread->join();
         mPlayThread = NULL;
-    }
-
-    if (mSwsCtx != NULL) {
-        sws_freeContext(mSwsCtx);
-        mSwsCtx = NULL;
     }
 
     if (mQueue != NULL) {

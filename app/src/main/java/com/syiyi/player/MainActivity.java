@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.syiyi.player.opengl.IIGLSurfaceView;
+import com.syiyi.player.opengl.Render;
 
 public class MainActivity extends AppCompatActivity {
     private IIMediaPlayer mPlayer;
@@ -21,7 +22,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void play(View view) {
-        mPlayer.setRender(mVideoView.getRender());
+        Render render = mVideoView.getRender();
+        mPlayer.setRender(render);
         mPlayer.prepareAsync(new IIMediaPlayer.OnPrepareListener() {
             @Override
             public void onPrepared() {
