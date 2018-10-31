@@ -61,6 +61,7 @@ public:
 
     void initSwsCtx();
 
+    void renderFrame(const AVFrame *yuvFrame) const;
 };
 
 

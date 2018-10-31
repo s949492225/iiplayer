@@ -80,33 +80,12 @@ void VideoRender::playThread() {
                     yuvFrame->linesize);
 
             double diff = getFrameDiffTime(frame);
-
             av_usleep((unsigned int) getDelayTime(diff) * 1000000);
+            if (mStatus == NULL || mStatus->isExit) {
+                break;
+            }
 
-
-            JNIEnv *env = get_jni_env();
-
-
-            jbyteArray y = env->NewByteArray(mWidth * mHeight);
-            env->SetByteArrayRegion(y, 0, mWidth * mHeight,
-                                    reinterpret_cast<const jbyte *>(yuvFrame->data[0]));
-
-            jbyteArray u = env->NewByteArray(mWidth * mHeight / 4);
-            env->SetByteArrayRegion(u, 0, mWidth * mHeight / 4,
-                                    reinterpret_cast<const jbyte *>(yuvFrame->data[1]));
-
-            jbyteArray v = env->NewByteArray(mWidth * mHeight / 4);
-            env->SetByteArrayRegion(v, 0, mWidth * mHeight / 4,
-                                    reinterpret_cast<const jbyte *>(yuvFrame->data[2]));
-
-
-            jclass jcs = env->GetObjectClass(static_cast<jobject>(mGLRender));
-            jmethodID jmid = env->GetMethodID(jcs, "setYUVRenderData", "");
-            env->CallVoidMethod(static_cast<jobject>(mGLRender), jmid, mWidth, mHeight, y, u, v);
-
-            env->DeleteLocalRef(y);
-            env->DeleteLocalRef(u);
-            env->DeleteLocalRef(v);
+//            renderFrame(yuvFrame);
 
             av_free(buffer);
 
@@ -117,15 +96,39 @@ void VideoRender::playThread() {
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
-            break;
         } else {
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
-            continue;
         }
     }
 
+}
+
+void VideoRender::renderFrame(const AVFrame *yuvFrame) const {
+    JNIEnv *env = get_jni_env();
+
+
+    jbyteArray y = env->NewByteArray(mWidth * mHeight);
+    env->SetByteArrayRegion(y, 0, mWidth * mHeight,
+                            reinterpret_cast<const jbyte *>(yuvFrame->data[0]));
+
+    jbyteArray u = env->NewByteArray(mWidth * mHeight / 4);
+    env->SetByteArrayRegion(u, 0, mWidth * mHeight / 4,
+                            reinterpret_cast<const jbyte *>(yuvFrame->data[1]));
+
+    jbyteArray v = env->NewByteArray(mWidth * mHeight / 4);
+    env->SetByteArrayRegion(v, 0, mWidth * mHeight / 4,
+                            reinterpret_cast<const jbyte *>(yuvFrame->data[2]));
+
+
+    jclass jcs = env->GetObjectClass(static_cast<jobject>(mGLRender));
+    jmethodID jmid = env->GetMethodID(jcs, "setYUVRenderData", "");
+    env->CallVoidMethod(static_cast<jobject>(mGLRender), jmid, mWidth, mHeight, y, u, v);
+
+    env->DeleteLocalRef(y);
+    env->DeleteLocalRef(u);
+    env->DeleteLocalRef(v);
 }
 
 double VideoRender::getFrameDiffTime(AVFrame *avFrame) {

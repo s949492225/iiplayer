@@ -107,19 +107,21 @@ void MediaPlayer::readThread() {
         AVPacket *packet = av_packet_alloc();
         if (av_read_frame(mFormatCtx, packet) == 0) {
             if (packet->stream_index == mAudioStreamIndex) {
-                while (!mStatus->isExit && mStatus->mAudioQueue->getQueueSize() >=
-                                           mStatus->mMaxQueueSize) {
+                while (mStatus != NULL && !mStatus->isExit &&
+                       mStatus->mAudioQueue->getQueueSize() >=
+                       mStatus->mMaxQueueSize) {
                     av_usleep(1000 * 5);
                 }
-                if (mStatus->isExit)
+                if (mStatus == NULL || mStatus->isExit)
                     break;
                 mStatus->mAudioQueue->putPacket(packet);
             } else if (packet->stream_index == mVideoStreamIndex) {
-                while (!mStatus->isExit && mStatus->mVideoQueue->getQueueSize() >=
-                                           mStatus->mMaxQueueSize) {
+                while (mStatus != NULL && !mStatus->isExit &&
+                       mStatus->mVideoQueue->getQueueSize() >=
+                       mStatus->mMaxQueueSize) {
                     av_usleep(1000 * 5);
                 }
-                if (mStatus->isExit)
+                if (mStatus == NULL || mStatus->isExit)
                     break;
                 mStatus->mVideoQueue->putPacket(packet);
             } else {
@@ -172,10 +174,10 @@ void MediaPlayer::decodeVideo() {
         ret = avcodec_receive_frame(mVideoCodecCtx, frame);
         if (ret == 0) {
 
-            while (!mStatus->isExit && mVideoRender->isQueueFull()) {
+            while (mStatus != NULL && !mStatus->isExit && mVideoRender->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mStatus->isExit) {
+            if (mStatus == NULL || mStatus->isExit) {
                 continue;
             }
             mVideoRender->putFrame(frame);
@@ -183,6 +185,11 @@ void MediaPlayer::decodeVideo() {
             av_free(packet);
             packet = NULL;
         } else {
+
+            av_frame_free(&frame);
+            av_free(frame);
+            frame = NULL;
+
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
@@ -195,7 +202,7 @@ void MediaPlayer::decodeAudio() {
         LOGD("音频解码线程开始,tid:%i\n", gettid())
     }
     AVPacket *packet = NULL;
-    AVFrame *audioFrame = NULL;
+    AVFrame *frame = NULL;
     int ret = 0;
 
     while (mStatus != NULL && !mStatus->isExit) {
@@ -220,28 +227,32 @@ void MediaPlayer::decodeAudio() {
             continue;
         }
 
-        audioFrame = av_frame_alloc();
-        ret = avcodec_receive_frame(mAudioCodecCtx, audioFrame);
+        frame = av_frame_alloc();
+        ret = avcodec_receive_frame(mAudioCodecCtx, frame);
         if (ret == 0) {
 
-            if (audioFrame->channels && audioFrame->channel_layout == 0) {
-                audioFrame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
-                        audioFrame->channels));
-            } else if (audioFrame->channels == 0 && audioFrame->channel_layout > 0) {
-                audioFrame->channels = av_get_channel_layout_nb_channels(
-                        audioFrame->channel_layout);
+            if (frame->channels && frame->channel_layout == 0) {
+                frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
+                        frame->channels));
+            } else if (frame->channels == 0 && frame->channel_layout > 0) {
+                frame->channels = av_get_channel_layout_nb_channels(
+                        frame->channel_layout);
             }
-            while (!mStatus->isExit && mAudioRender->isQueueFull()) {
+            while (mStatus != NULL && !mStatus->isExit && mAudioRender->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mStatus->isExit) {
+            if (mStatus == NULL || mStatus->isExit) {
                 continue;
             }
-            mAudioRender->putFrame(audioFrame);
+            mAudioRender->putFrame(frame);
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
         } else {
+            av_frame_free(&frame);
+            av_free(frame);
+            frame = NULL;
+
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
