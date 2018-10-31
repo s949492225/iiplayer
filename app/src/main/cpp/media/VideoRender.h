@@ -61,7 +61,6 @@ public:
 
     void initSwsCtx();
 
-    void render();
 };
 
 
