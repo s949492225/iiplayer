@@ -106,25 +106,21 @@ void MediaPlayer::readThread() {
             av_usleep(1000 * 100);
             continue;
         }
+
+        if (mStatus->mVideoQueue->getQueueSize() >=
+            mStatus->mMaxQueueSize) {
+            av_usleep(1000 * 5);
+            if (mStatus == NULL || mStatus->isExit) {
+                break;
+            }
+            continue;
+        }
         AVPacket *packet = av_packet_alloc();
         if (av_read_frame(mFormatCtx, packet) == 0) {
+
             if (packet->stream_index == mVideoStreamIndex) {
-//                while (mStatus != NULL && !mStatus->isExit &&
-//                       mStatus->mVideoQueue->getQueueSize() >=
-//                       mStatus->mMaxQueueSize) {
-//                    av_usleep(1000 * 5);
-//                }
-//                if (mStatus == NULL || mStatus->isExit)
-//                    break;
                 mStatus->mVideoQueue->putPacket(packet);
             } else if (packet->stream_index == mAudioStreamIndex) {
-//                while (mStatus != NULL && !mStatus->isExit &&
-//                       mStatus->mAudioQueue->getQueueSize() >=
-//                       mStatus->mMaxQueueSize) {
-//                    av_usleep(1000 * 5);
-//                }
-//                if (mStatus == NULL || mStatus->isExit)
-//                    break;
                 mStatus->mAudioQueue->putPacket(packet);
             } else {
                 av_packet_free(&packet);
