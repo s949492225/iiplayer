@@ -41,15 +41,16 @@ void VideoRender::playThread() {
 
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
+
         if (ret == 0) {
-            double diff = getFrameDiffTime(frame);
-            av_usleep((unsigned int) getDelayTime(diff) * 1000000);
-            if (mStatus == NULL || mStatus->isExit) {
-                av_frame_free(&frame);
-                break;
-            }
 
             if (frame->format == AV_PIX_FMT_YUV420P) {
+                double diff = getFrameDiffTime(frame);
+                av_usleep((unsigned int) getDelayTime(diff) * 1000000);
+                if (mStatus == NULL || mStatus->isExit) {
+                    av_frame_free(&frame);
+                    break;
+                }
                 renderFrame(frame);
             } else {
                 AVFrame *yuvFrame = av_frame_alloc();
@@ -95,6 +96,12 @@ void VideoRender::playThread() {
                         yuvFrame->data,
                         yuvFrame->linesize);
 
+                double diff = getFrameDiffTime(frame);
+                av_usleep((unsigned int) getDelayTime(diff) * 1000000);
+                if (mStatus == NULL || mStatus->isExit) {
+                    av_frame_free(&frame);
+                    break;
+                }
                 renderFrame(yuvFrame);
 
                 av_frame_free(&yuvFrame);

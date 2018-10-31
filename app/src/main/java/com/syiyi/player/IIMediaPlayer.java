@@ -121,7 +121,7 @@ public class IIMediaPlayer {
     }
 
     protected void onLoading(boolean isLoad) {
-        Log.d("iiplayer", "onLoading:" + isLoad);
+//        Log.d("iiplayer", "onLoading:" + isLoad);
 
     }
 
