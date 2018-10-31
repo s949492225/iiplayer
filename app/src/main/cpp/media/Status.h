@@ -17,7 +17,7 @@ public:
     bool isPause = true;
     PacketQueue *mAudioQueue = NULL;
     PacketQueue *mVideoQueue = NULL;
-    int mMaxQueueSize = 40;
+    int mMaxQueueSize = 100;
     bool isSeek = false;
     bool isLoad = false;
     int mSeekSec = 0;

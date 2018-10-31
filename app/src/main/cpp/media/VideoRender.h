@@ -33,8 +33,6 @@ public:
     AVPixelFormat mPixFmt;
     void *mGLRender = NULL;
     double mNowTime = 0;//当前frame时间
-    double delayTime = 0;
-    double defaultDelayTime = 0.04;
     int mWidth = 0;
     int mHeight = 0;
     FrameQueue *mQueue = NULL;
@@ -55,8 +53,6 @@ public:
     void notifyWait();
 
     double getFrameDiffTime(AVFrame *avFrame);
-
-    double getDelayTime(double diff);
 
     void renderFrame(const AVFrame *yuvFrame) const;
 };

@@ -4,7 +4,8 @@
 #include "VideoRender.h"
 #import "MediaPlayer.h"
 
-VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext,AVRational timebase, void *render) {
+VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase,
+                         void *render) {
     mPlayer = player;
     mStatus = player->mStatus;
     mPixFmt = codecContext->pix_fmt;
@@ -46,10 +47,12 @@ void VideoRender::playThread() {
 
             if (frame->format == AV_PIX_FMT_YUV420P) {
                 double diff = getFrameDiffTime(frame);
-                av_usleep((unsigned int) getDelayTime(diff) * 1000000);
-                if (mStatus == NULL || mStatus->isExit) {
-                    av_frame_free(&frame);
-                    break;
+                if (diff < 0) {
+                    av_usleep(static_cast<unsigned int>(-diff * 1000000));
+                    if (mStatus == NULL || mStatus->isExit) {
+                        av_frame_free(&frame);
+                        break;
+                    }
                 }
                 renderFrame(frame);
             } else {
@@ -97,10 +100,12 @@ void VideoRender::playThread() {
                         yuvFrame->linesize);
 
                 double diff = getFrameDiffTime(frame);
-                av_usleep((unsigned int) getDelayTime(diff) * 1000000);
-                if (mStatus == NULL || mStatus->isExit) {
-                    av_frame_free(&frame);
-                    break;
+                if (diff < 0) {
+                    av_usleep(static_cast<unsigned int>(-diff * 1000000));
+                    if (mStatus == NULL || mStatus->isExit) {
+                        av_frame_free(&frame);
+                        break;
+                    }
                 }
                 renderFrame(yuvFrame);
 
@@ -156,38 +161,6 @@ double VideoRender::getFrameDiffTime(AVFrame *avFrame) {
     double diff = mPlayer->mPlayTime - mNowTime;
     return diff;
 }
-
-double VideoRender::getDelayTime(double diff) {
-
-    if (diff > 0.003) {
-        delayTime = delayTime * 2 / 3;
-        if (delayTime < defaultDelayTime / 2) {
-            delayTime = defaultDelayTime * 2 / 3;
-        } else if (delayTime > defaultDelayTime * 2) {
-            delayTime = defaultDelayTime * 2;
-        }
-    } else if (diff < -0.003) {
-        delayTime = delayTime * 3 / 2;
-        if (delayTime < defaultDelayTime / 2) {
-            delayTime = defaultDelayTime * 2 / 3;
-        } else if (delayTime > defaultDelayTime * 2) {
-            delayTime = defaultDelayTime * 2;
-        }
-    } else if (diff == 0.003) {
-
-    }
-    if (diff >= 0.5) {
-        delayTime = 0;
-    } else if (diff <= -0.5) {
-        delayTime = defaultDelayTime * 2;
-    }
-
-    if (fabs(diff) >= 10) {
-        delayTime = defaultDelayTime;
-    }
-    return delayTime;
-}
-
 
 void VideoRender::putFrame(AVFrame *frame) {
     mQueue->putFrame(frame);
