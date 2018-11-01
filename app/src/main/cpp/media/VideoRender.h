@@ -21,17 +21,19 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libavutil/time.h>
 }
+
 class MediaPlayer;
 
 class VideoRender {
 public:
 
-    VideoRender(MediaPlayer *player, AVCodecContext *codecContext,AVRational timebase, void *render);
+    VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase);
+
     ~VideoRender();
+
     Status *mStatus = NULL;
     MediaPlayer *mPlayer = NULL;
     AVPixelFormat mPixFmt;
-    void *mGLRender = NULL;
     double mNowTime = 0;//当前frame时间
     int mWidth = 0;
     int mHeight = 0;
@@ -54,7 +56,7 @@ public:
 
     double getFrameDiffTime(AVFrame *avFrame);
 
-    void renderFrame(const AVFrame *yuvFrame) const;
+    void renderFrame(AVFrame *yuvFrame) const;
 };
 
 

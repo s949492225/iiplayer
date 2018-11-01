@@ -4,7 +4,8 @@
 #include "AudioRender.h"
 #include "MediaPlayer.h"
 
-AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext,AVRational timebase) {
+AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext,
+                         AVRational timebase) {
     mStatus = player->mStatus;
     mPlayer = player;
     this->duration = duration;
@@ -48,14 +49,14 @@ int AudioRender::getPcmData() {
 
             if (!mStatus->isLoad) {
                 mStatus->isLoad = true;
-                mPlayer->sendMsg(ACTION_PLAY_LOADING);
+                mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
             av_usleep(1000 * 100);
             continue;
         } else {
             if (mStatus->isLoad) {
                 mStatus->isLoad = false;
-                mPlayer->sendMsg(ACTION_PLAY_LOADING_OVER);
+                mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
             }
         }
         AVFrame *frame = av_frame_alloc();
@@ -63,8 +64,8 @@ int AudioRender::getPcmData() {
         if (ret == 0) {
 
             if (frame->pts == duration) {
+                mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
                 mPlayer->release();
-                mPlayer->sendMsg(ACTION_PLAY_FINISH);
             }
 
             if (frame->channels && frame->channel_layout == 0) {
@@ -80,7 +81,7 @@ int AudioRender::getPcmData() {
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
             mNowTime = frame->pts * av_q2d(mTimebase);
-            mPlayer->sendMsg(DATA_NOW_PLAYING_TIME, (int) mNowTime);
+            mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) mNowTime);
             if (mNowTime < mSumPlayedTime) {
                 mNowTime = mSumPlayedTime;
             }

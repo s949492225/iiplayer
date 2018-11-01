@@ -4,7 +4,6 @@
 
 #include "MediaPlayer.h"
 
-#define NO_ARG -10000
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
@@ -15,8 +14,8 @@ int ioInterruptCallback(void *ctx) {
 }
 
 
-MediaPlayer::MediaPlayer() {
-
+MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
+    mCallJava = new CallJava(pVM, pEnv, obj);
 }
 
 void MediaPlayer::open(const char *url) {
@@ -30,7 +29,7 @@ void MediaPlayer::open(const char *url) {
 
 
 int MediaPlayer::prepare() {
-    sendMsg(ACTION_PLAY_PREPARE);
+    sendMsg(false, ACTION_PLAY_PREPARE);
 
     av_register_all();
     avformat_network_init();
@@ -44,7 +43,7 @@ int MediaPlayer::prepare() {
         if (LOG_DEBUG) {
             LOGE("can not open url %s", mUrl);
         }
-        sendMsg(ERROR_OPEN_FILE);
+        sendMsg(false, ERROR_OPEN_FILE);
         return -1;
     }
 
@@ -52,7 +51,7 @@ int MediaPlayer::prepare() {
         if (LOG_DEBUG) {
             LOGE("can not find steams from %s", mUrl);
         }
-        sendMsg(ERROR_FIND_STREAM);
+        sendMsg(false, ERROR_FIND_STREAM);
         return -1;
     }
     //流信息获取
@@ -61,29 +60,37 @@ int MediaPlayer::prepare() {
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             //音频解码器
             if (i != -1) {
-                get_codec_context(parameters, &mAudioCodecCtx);
+                int ret = get_codec_context(parameters, &mAudioCodecCtx);
+                if (ret < 0) {
+                    sendMsg(false, ERROR_AUDIO_DECODEC_EXCEPTION, mDuration);
+                    return -1;
+                }
                 int64_t sumTime = mFormatCtx->duration;
                 mAudioRender = new AudioRender(this, sumTime, mAudioCodecCtx,
                                                mFormatCtx->streams[i]->time_base);
                 mAudioStreamIndex = i;
                 mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
-                sendMsg(DATA_DURATION, mDuration);
+                sendMsg(false, DATA_DURATION, mDuration);
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
-                get_codec_context(parameters, &mVideoCodecCtx);
+                int ret = get_codec_context(parameters, &mVideoCodecCtx);
+                if (ret < 0) {
+                    sendMsg(false, ERROR_VIDEO_DECODEC_EXCEPTION, mDuration);
+                    return -1;
+                }
                 mVideoRender = new VideoRender(this, mVideoCodecCtx,
-                                               mFormatCtx->streams[i]->time_base, mGLRender);
+                                               mFormatCtx->streams[i]->time_base);
                 mVideoStreamIndex = i;
             }
         }
     }
 
-    sendMsg(ACTION_PLAY_PREPARED);
+    sendMsg(false, ACTION_PLAY_PREPARED);
     //start audio decode thread
     mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
     mVideoDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeVideo, this));
-    return 1;
+    return 0;
 }
 
 
@@ -166,7 +173,7 @@ void MediaPlayer::decodeVideo() {
             packet = NULL;
             continue;
         }
-        long time0 = getCurrentTime();
+//        long time0 = getCurrentTime();
         ret = avcodec_send_packet(mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
@@ -178,7 +185,7 @@ void MediaPlayer::decodeVideo() {
         frame = av_frame_alloc();
         ret = avcodec_receive_frame(mVideoCodecCtx, frame);
         long time1 = getCurrentTime();
-        LOGD("解码的时长:%ld", time1 - time0);
+//        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
             while (mStatus != NULL && !mStatus->isExit && mVideoRender->isQueueFull()) {
@@ -273,7 +280,7 @@ void MediaPlayer::play() {
         mStatus->isPause = false;
         mAudioRender->play();
         mVideoRender->play();
-        sendMsg(ACTION_PLAY);
+        sendMsg(true, ACTION_PLAY);
     }
 }
 
@@ -281,7 +288,7 @@ void MediaPlayer::pause() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = true;
         mAudioRender->pause();
-        sendMsg(ACTION_PLAY_PAUSE);
+        sendMsg(true, ACTION_PLAY_PAUSE);
     }
 }
 
@@ -289,7 +296,7 @@ void MediaPlayer::resume() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = false;
         mAudioRender->resume();
-        sendMsg(ACTION_PLAY);
+        sendMsg(true, ACTION_PLAY);
     }
 }
 
@@ -301,7 +308,7 @@ void MediaPlayer::seek(int sec) {
         rel = mDuration;
     mStatus->mSeekSec = rel;
     mStatus->isSeek = true;
-    sendMsg(ACTION_PLAY_SEEK);
+    sendMsg(true, ACTION_PLAY_SEEK);
 }
 
 void MediaPlayer::handlerSeek() {
@@ -318,12 +325,12 @@ void MediaPlayer::handlerSeek() {
     avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
 
     mStatus->isSeek = false;
-    sendMsg(ACTION_PLAY);
 }
 
 void MediaPlayer::stop() {
+    sendMsg(true, ACTION_PLAY_STOP);
     release();
-    sendMsg(ACTION_PLAY_STOP);
+
 }
 
 
@@ -397,9 +404,8 @@ void MediaPlayer::release() {
 
     avformat_network_deinit();
 
-    if (mMsgSender != NULL) {
-        get_jni_env()->DeleteGlobalRef(static_cast<jobject>(mMsgSender));
-        mMsgSender = NULL;
+    if (mCallJava != NULL) {
+        delete mCallJava;
     }
 
     if (LOG_DEBUG) {
@@ -407,15 +413,7 @@ void MediaPlayer::release() {
     }
 }
 
-void MediaPlayer::setMsgSender(jobject *sender) {
-    mMsgSender = *sender;
-}
-
-void MediaPlayer::setGLRender(jobject *render) {
-    mGLRender = *render;
-}
-
-void MediaPlayer::sendMsg(int type, int data) {
+void MediaPlayer::sendMsg(bool isMain, int type, int data) {
     switch (type) {
         case
             ERROR_OPEN_FILE
@@ -426,38 +424,18 @@ void MediaPlayer::sendMsg(int type, int data) {
             break;
     }
 
-    if (mMsgSender != NULL) {
-        sendJniMsg(type, data);
+    if (mCallJava != NULL) {
+        mCallJava->sendMsg(isMain, type, data);
     }
 }
 
-void MediaPlayer::sendMsg(int type) {
-    if (mMsgSender != NULL) {
-        sendJniMsg(type, NO_ARG);
-    }
+void MediaPlayer::sendMsg(bool isMain, int type) {
+    sendMsg(isMain, type, NO_ARG);
 }
 
-void MediaPlayer::sendJniMsg(int type, int data) const {
-    JNIEnv *env = get_jni_env();
-
-    //handler
-    jobject sender = static_cast<jobject>(mMsgSender);
-    jclass cls = env->GetObjectClass(sender);
-    //msg
-    jmethodID obMsgMethod = env->GetMethodID(cls, "obtainMessage", "(I)Landroid/os/Message;");
-    //get msg
-    jobject msg = env->CallObjectMethod(sender, obMsgMethod, type);
-
-    if (data != NO_ARG) {
-        //set arg1=data
-        jclass msgCls = env->GetObjectClass(msg);
-        jfieldID arg1FiledId = env->GetFieldID(msgCls, "arg1", "I");
-        env->SetIntField(msg, arg1FiledId, data);
-    }
-
-    //send
-    jmethodID send_method = env->GetMethodID(cls, "sendMessage", "(Landroid/os/Message;)Z");
-    env->CallBooleanMethod(sender, send_method, msg);
+CallJava *MediaPlayer::get() {
+    return mCallJava;
 }
+
 
 

@@ -17,6 +17,7 @@ public class IIMediaPlayer {
     private OnPrepareListener mPrepareListener;
     private Render mRender;
 
+    @SuppressWarnings("unused")
     protected static class Code {
         static final int ERROR_OPEN_FILE = -1;
         static final int ERROR_FIND_STREAM = -2;
@@ -50,7 +51,7 @@ public class IIMediaPlayer {
     }
 
     public IIMediaPlayer() {
-        initMsg();
+        initHandler();
     }
 
 
@@ -75,6 +76,18 @@ public class IIMediaPlayer {
             throw new RuntimeException("url is null");
         }
         nativeOpen(url);
+    }
+
+    @SuppressWarnings("unused")
+    public void sendMessage(Message msg) {
+        mHandler.sendMessage(msg);
+    }
+
+    @SuppressWarnings("unused")
+    public void setFrameData(int width, int height, byte[] y, byte[] u, byte[] v) {
+        if (mRender != null) {
+            mRender.setYUVRenderData(width, height, y, u, v);
+        }
     }
 
     public void play() {
@@ -141,7 +154,7 @@ public class IIMediaPlayer {
 
     protected native void nativeStop();
 
-    protected void initMsg() {
+    protected void initHandler() {
         mHandler = new Handler(Looper.myLooper(), new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {

@@ -4,14 +4,12 @@
 #include "VideoRender.h"
 #import "MediaPlayer.h"
 
-VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase,
-                         void *render) {
+VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase) {
     mPlayer = player;
     mStatus = player->mStatus;
     mPixFmt = codecContext->pix_fmt;
     mTimebase = timebase;
     mQueue = new FrameQueue(mStatus);
-    mGLRender = render;
     mWidth = codecContext->width;
     mHeight = codecContext->height;
 
@@ -29,14 +27,14 @@ void VideoRender::playThread() {
         {
             if (!mStatus->isLoad) {
                 mStatus->isLoad = true;
-                mPlayer->sendMsg(ACTION_PLAY_LOADING);
+                mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
             av_usleep(1000 * 5);
             continue;
         } else {
             if (mStatus->isLoad) {
                 mStatus->isLoad = false;
-                mPlayer->sendMsg(ACTION_PLAY_LOADING_OVER);
+                mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
             }
         }
 
@@ -120,30 +118,8 @@ void VideoRender::playThread() {
 
 }
 
-void VideoRender::renderFrame(const AVFrame *yuvFrame) const {
-    JNIEnv *env = get_jni_env();
-
-
-    jbyteArray y = env->NewByteArray(mWidth * mHeight);
-    env->SetByteArrayRegion(y, 0, mWidth * mHeight,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[0]));
-
-    jbyteArray u = env->NewByteArray(mWidth * mHeight / 4);
-    env->SetByteArrayRegion(u, 0, mWidth * mHeight / 4,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[1]));
-
-    jbyteArray v = env->NewByteArray(mWidth * mHeight / 4);
-    env->SetByteArrayRegion(v, 0, mWidth * mHeight / 4,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[2]));
-
-
-    jclass jcs = env->GetObjectClass(static_cast<jobject>(mGLRender));
-    jmethodID jmid = env->GetMethodID(jcs, "setYUVRenderData", "(II[B[B[B)V");
-    env->CallVoidMethod(static_cast<jobject>(mGLRender), jmid, mWidth, mHeight, y, u, v);
-
-    env->DeleteLocalRef(y);
-    env->DeleteLocalRef(u);
-    env->DeleteLocalRef(v);
+void VideoRender::renderFrame(AVFrame *yuvFrame) const {
+    mPlayer->get()->setFrameData(false,yuvFrame);
 }
 
 double VideoRender::getFrameDiffTime(AVFrame *avFrame) {

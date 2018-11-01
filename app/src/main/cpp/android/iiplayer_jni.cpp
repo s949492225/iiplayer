@@ -18,18 +18,6 @@ jfieldID get_player_native_player_field(JNIEnv *env) {
     return env->GetFieldID(jcs, "mNativePlayer", "J");
 }
 
-jobject get_player_handler(JNIEnv *env, jobject obj) {
-    jclass jcs = env->FindClass(IIMediaPlayer);
-    jfieldID send_id = env->GetFieldID(jcs, "mHandler", "Landroid/os/Handler;");
-    jobject send_obj = env->GetObjectField(obj, send_id);
-    return send_obj;
-}
-
-jobject get_player_gl_render(JNIEnv *env, jobject obj) {
-    jclass jcs = env->FindClass(IIMediaPlayer);
-    jfieldID rend_id = env->GetFieldID(jcs, "mRender", "Lcom/syiyi/player/opengl/Render;");
-    return env->GetObjectField(obj, rend_id);
-}
 
 MediaPlayer *get_media_player(JNIEnv *env, jobject obj) {
     jfieldID jfd = get_player_native_player_field(env);
@@ -44,16 +32,9 @@ void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
         old_player->stop();
         delete old_player;
     }
-
+    
     jfieldID jfd = get_player_native_player_field(env);
-
     if (player != NULL) {
-
-        jobject handler = env->NewGlobalRef(get_player_handler(env, obj));
-        player->setMsgSender(&handler);
-
-        jobject render = env->NewGlobalRef(get_player_gl_render(env, obj));
-        player->setGLRender(&render);
         env->SetLongField(obj, jfd, (jlong) player);
     } else {
         env->SetLongField(obj, jfd, 0);
@@ -70,7 +51,7 @@ static void JNICALL init(JNIEnv *env, jobject obj) {
     if (old_player) {
         old_player->release();
     }
-    MediaPlayer *player = new MediaPlayer();
+    MediaPlayer *player = new MediaPlayer(get_jni_jvm(), env, obj);
     set_media_player(env, obj, player);
 }
 
