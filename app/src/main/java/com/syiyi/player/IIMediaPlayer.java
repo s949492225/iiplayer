@@ -126,7 +126,7 @@ public class IIMediaPlayer {
     }
 
     protected void onGetPlayingTime(int sec) {
-//        Log.d("iiplayer", "onGetPlayingTime");
+        Log.d("iiplayer", "onGetPlayingTime:" + sec);
     }
 
     protected void onPlaying(boolean isPlay) {

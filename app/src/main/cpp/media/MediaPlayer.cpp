@@ -306,6 +306,8 @@ void MediaPlayer::seek(int sec) {
         rel = 0;
     if (rel > mDuration)
         rel = mDuration;
+    else
+        rel = sec;
     mStatus->mSeekSec = rel;
     mStatus->isSeek = true;
     sendMsg(true, ACTION_PLAY_SEEK);
@@ -315,6 +317,7 @@ void MediaPlayer::handlerSeek() {
     //clear
     mStatus->mAudioQueue->clearAll();
     mStatus->mVideoQueue->clearAll();
+
     mAudioRender->clearQueue();
     mAudioRender->resetTime();
 
