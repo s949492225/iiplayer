@@ -32,10 +32,6 @@ private:
     int64_t duration;
     FrameQueue *mQueue = NULL;
     int mMaxQueueSize = 40;
-
-    double mSumPlayedTime = 0;//总的播放时长
-    double mNowTime = 0;//当前frame时间
-    double mLastTime = 0; //上一次调用时间
     int mOutChannelNum;
     SwrContext *mSwrCtx = NULL;
     std::thread *mPlayThread = NULL;
@@ -88,8 +84,6 @@ public:
     void putFrame(AVFrame *frame);
 
     void clearQueue();
-
-    void resetTime();
 };
 
 

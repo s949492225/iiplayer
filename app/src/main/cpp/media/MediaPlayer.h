@@ -32,6 +32,8 @@ private:
     std::thread *mReadThread = NULL;
     std::thread *mAudioDecodeThread = NULL;
     std::thread *mVideoDecodeThread = NULL;
+
+    pthread_mutex_t mMutexRead;
     AVFormatContext *mFormatCtx = NULL;
     const char *mUrl = NULL;
     //info
@@ -64,7 +66,7 @@ private:
 
 public:
     Status *mStatus = NULL;
-    double mPlayTime = 0;
+    double mClock = 0;
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject pJobject);
 

@@ -108,7 +108,7 @@ void VideoRender::playThread() {
                         yuvFrame->linesize);
 
                 double diff = getFrameDiffTime(frame);
-                if (diff < 0) {
+                if (diff < -0.01) {
                     av_usleep(static_cast<unsigned int>(-diff * 1000000));
                     if (mStatus == NULL || mStatus->isExit) {
                         av_frame_free(&frame);
@@ -133,18 +133,18 @@ void VideoRender::renderFrame(AVFrame *yuvFrame) const {
 }
 
 double VideoRender::getFrameDiffTime(AVFrame *avFrame) {
-
     double pts = av_frame_get_best_effort_timestamp(avFrame);
     if (pts == AV_NOPTS_VALUE) {
         pts = 0;
     }
     pts *= av_q2d(mTimebase);
 
-    if (pts > 0) {
-        mNowTime = pts;
+    if (pts == 0) {
+        LOGE("pts==0")
+        return 0;
     }
 
-    double diff = mPlayer->mPlayTime - mNowTime;
+    double diff = mPlayer->mClock - pts;
     return diff;
 }
 

@@ -4,6 +4,7 @@
 
 #include "MediaPlayer.h"
 
+#define MAX_QUEUE_SIZE (15 * 1024 * 1024)
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
@@ -16,6 +17,7 @@ int ioInterruptCallback(void *ctx) {
 
 MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
     mCallJava = new CallJava(pVM, pEnv, obj);
+    pthread_mutex_init(&mMutexRead, NULL);
 }
 
 void MediaPlayer::open(const char *url) {
@@ -112,16 +114,15 @@ void MediaPlayer::readThread() {
         }
 
         if (mStatus->isPause) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         }
 
-        if (mStatus->mVideoQueue->getQueueSize() >=
-            mStatus->mMaxQueueSize) {
-            av_usleep(1000 * 5);
-            if (mStatus == NULL || mStatus->isExit) {
-                break;
-            }
+        if (mStatus->mVideoQueue->getQueueSize() + mStatus->mVideoQueue->getQueueSize() >
+            MAX_QUEUE_SIZE) {
+            pthread_mutex_lock(&mMutexRead);
+            thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
+            pthread_mutex_unlock(&mMutexRead);
             continue;
         }
         AVPacket *packet = av_packet_alloc();
@@ -163,6 +164,11 @@ void MediaPlayer::decodeVideo() {
 
     while (mStatus != NULL && !mStatus->isExit) {
 
+        if (mStatus->isSeek) {
+            av_usleep(1000 * 100);
+            continue;
+        }
+
         if (mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
@@ -196,7 +202,9 @@ void MediaPlayer::decodeVideo() {
             if (mStatus == NULL || mStatus->isExit) {
                 continue;
             }
-            mVideoRender->putFrame(frame);
+            if (!mStatus->isSeek) {
+                mVideoRender->putFrame(frame);
+            }
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
@@ -222,6 +230,11 @@ void MediaPlayer::decodeAudio() {
     int ret = 0;
 
     while (mStatus != NULL && !mStatus->isExit) {
+
+        if (mStatus->isSeek) {
+            av_usleep(1000 * 100);
+            continue;
+        }
 
         if (mStatus->isPause) {
             av_usleep(1000 * 100);
@@ -260,7 +273,9 @@ void MediaPlayer::decodeAudio() {
             if (mStatus == NULL || mStatus->isExit) {
                 continue;
             }
-            mAudioRender->putFrame(frame);
+            if (!mStatus->isSeek) {
+                mAudioRender->putFrame(frame);
+            }
             av_packet_free(&packet);
             av_free(packet);
             packet = NULL;
@@ -313,22 +328,24 @@ void MediaPlayer::seek(int sec) {
     mStatus->mSeekSec = rel;
     mStatus->isSeek = true;
     sendMsg(true, ACTION_PLAY_SEEK);
+    pthread_cond_signal(&mStatus->mCondRead);
 }
 
 void MediaPlayer::handlerSeek() {
-    //clear
-    mStatus->mAudioQueue->clearAll();
-    mStatus->mVideoQueue->clearAll();
-
-    mAudioRender->clearQueue();
-    mAudioRender->resetTime();
-
-    mVideoRender->clearQueue();
-
     //seek io
     int64_t rel = mStatus->mSeekSec * AV_TIME_BASE;
-    avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
+    int ret = avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
+    if (ret == 0) {
+        //clear
+        mStatus->mAudioQueue->clearAll();
+        mStatus->mVideoQueue->clearAll();
 
+        mAudioRender->clearQueue();
+        mVideoRender->clearQueue();
+        mClock = mStatus->mSeekSec;
+    } else {
+        LOGE("seek fail")
+    }
     mStatus->isSeek = false;
 }
 
@@ -344,6 +361,7 @@ void MediaPlayer::release() {
     if (mStatus) {
         mStatus->isLoad = false;
         mStatus->isExit = true;
+        pthread_cond_signal(&mStatus->mCondRead);
         mStatus->mAudioQueue->notifyAll();
         mStatus->mVideoQueue->notifyAll();
     }
@@ -452,7 +470,7 @@ jstring MediaPlayer::getInfo(char *name) {
     } else if (strcmp(name, "height") == 0) {
         return get_jni_env()->NewStringUTF(to_char_str(mHeight));
     } else if (strcmp(name, "played_time") == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mPlayTime));
+        return get_jni_env()->NewStringUTF(to_char_str(mClock));
     }
     return get_jni_env()->NewStringUTF("");;
 }

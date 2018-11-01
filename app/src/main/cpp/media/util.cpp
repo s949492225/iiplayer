@@ -58,3 +58,10 @@ int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecCon
     return 0;
 }
 
+void thread_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex, long timeout_ms) {
+    struct timespec abstime;
+    abstime.tv_sec = time(NULL) + timeout_ms / 1000;
+    abstime.tv_nsec = (timeout_ms % 1000) * 1000000;
+    pthread_cond_timedwait(__cond, __mutex, &abstime);
+}
+

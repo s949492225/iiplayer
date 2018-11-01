@@ -43,6 +43,7 @@ int PacketQueue::getPacket(AVPacket *packet) {
             }
             break;
         } else {
+            pthread_cond_signal(&mStatus->mCondRead);
             pthread_cond_wait(&mCond, &mMutex);
         }
     }

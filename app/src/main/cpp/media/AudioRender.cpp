@@ -84,14 +84,7 @@ int AudioRender::getPcmData() {
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-
-            mNowTime = frame->pts * av_q2d(mTimebase);
-            mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) mNowTime);
-            if (mNowTime < mSumPlayedTime) {
-                mNowTime = mSumPlayedTime;
-            }
-            mSumPlayedTime = mNowTime;
-            mPlayer->mPlayTime = mSumPlayedTime;
+            mPlayer->mClock = frame->pts * av_q2d(mTimebase);;
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
@@ -111,13 +104,8 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
         AudioRender &render = *((AudioRender *) data);
         int bufferSize = render.getPcmData();
         if (bufferSize > 0) {
-            render.mSumPlayedTime += bufferSize / ((double) SAMPLE_SIZE);
-            render.mPlayer->mPlayTime = render.mSumPlayedTime;
-            if (render.mSumPlayedTime - render.mLastTime >= 0.1) {
-                render.mLastTime = render.mSumPlayedTime;
-                //回调应用层
-
-            }
+            render.mPlayer->mClock += bufferSize / ((double) SAMPLE_SIZE);
+            render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->mClock);
             SLresult result = (*render.mBufferQueue)->Enqueue(render.mBufferQueue,
                                                               (char *) render.mOutBuffer,
                                                               static_cast<SLuint32>(bufferSize));
@@ -307,9 +295,4 @@ void AudioRender::putFrame(AVFrame *frame) {
 
 void AudioRender::clearQueue() {
     mQueue->clearAll();
-}
-
-void AudioRender::resetTime() {
-    mSumPlayedTime = 0;
-    mLastTime = 0;
 }

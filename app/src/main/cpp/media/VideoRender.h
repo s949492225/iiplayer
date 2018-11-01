@@ -34,7 +34,6 @@ public:
     Status *mStatus = NULL;
     MediaPlayer *mPlayer = NULL;
     AVPixelFormat mPixFmt;
-    double mNowTime = 0;//当前frame时间
     int mWidth = 0;
     int mHeight = 0;
     FrameQueue *mQueue = NULL;

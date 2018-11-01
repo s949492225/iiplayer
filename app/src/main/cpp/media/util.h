@@ -41,3 +41,5 @@ char *to_char_str(T from) {
 }
 
 #endif //IIPLAYER_UTIL_H
+
+void thread_wait(pthread_cond_t* __cond, pthread_mutex_t* __mutex,long ms);
