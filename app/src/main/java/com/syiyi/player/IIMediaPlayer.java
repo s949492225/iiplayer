@@ -5,6 +5,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.syiyi.player.listener.OnPrepareListener;
+import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.opengl.Render;
 
 
@@ -15,6 +17,7 @@ public class IIMediaPlayer {
     private long mNativePlayer;
     private Handler mHandler;
     private OnPrepareListener mPrepareListener;
+    private OnPlayTimeListener mPlayTimeListener;
     private Render mRender;
 
     @SuppressWarnings("unused")
@@ -46,9 +49,6 @@ public class IIMediaPlayer {
         System.loadLibrary("swscale");
     }
 
-    public interface OnPrepareListener {
-        void onPrepared();
-    }
 
     public IIMediaPlayer() {
         initHandler();
@@ -124,10 +124,6 @@ public class IIMediaPlayer {
         Log.d("iiplayer", "onGetDuration");
     }
 
-    protected void onGetPlayingTime(int sec) {
-//        Log.d("iiplayer", "onGetPlayingTime:" + sec);
-    }
-
     protected void onPlaying(boolean isPlay) {
 //        Log.d("iiplayer", "onPlaying:" + isPlay);
     }
@@ -168,7 +164,7 @@ public class IIMediaPlayer {
                     case Code.DATA_DURATION:
                         onGetDuration(msg.arg1);
                     case Code.DATA_NOW_PLAYING_TIME:
-                        onGetPlayingTime(msg.arg1);
+                        mPlayTimeListener.onPlayTime(new TimeInfo(msg.arg1,getDuration()));
                     case Code.ACTION_PLAY:
                         onPlaying(true);
                         break;
@@ -191,6 +187,11 @@ public class IIMediaPlayer {
             }
         });
     }
+
+    public void setOnPlayTimeListener(OnPlayTimeListener listener) {
+        mPlayTimeListener = listener;
+    }
+
 
     public int getWidth() {
         return Integer.parseInt(nativeGetInfo("width"));
