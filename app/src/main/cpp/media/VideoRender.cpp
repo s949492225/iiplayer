@@ -23,6 +23,16 @@ void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
     while (mStatus != NULL && !mStatus->isExit) {
 
+        if (mStatus->isSeek) {
+            av_usleep(1000 * 100);
+            continue;
+        }
+
+        if (mStatus->isPause) {
+            av_usleep(1000 * 100);
+            continue;
+        }
+
         if (mQueue->getQueueSize() == 0)//加载中
         {
             if (!mStatus->isLoad) {
@@ -119,7 +129,7 @@ void VideoRender::playThread() {
 }
 
 void VideoRender::renderFrame(AVFrame *yuvFrame) const {
-    mPlayer->get()->setFrameData(false,yuvFrame);
+    mPlayer->get()->setFrameData(false, yuvFrame);
 }
 
 double VideoRender::getFrameDiffTime(AVFrame *avFrame) {

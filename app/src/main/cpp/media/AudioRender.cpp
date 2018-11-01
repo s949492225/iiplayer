@@ -39,10 +39,14 @@ void AudioRender::play() {
     mPlayThread = new std::thread(std::bind(&AudioRender::playThread, this));
 }
 
-
 int AudioRender::getPcmData() {
     mOutSize = 0;
     while (mStatus != NULL && !mStatus->isExit) {
+
+        if (mStatus->isSeek) {
+            av_usleep(1000 * 100);
+            continue;
+        }
 
         if (mQueue->getQueueSize() == 0)//加载中
         {
@@ -59,6 +63,7 @@ int AudioRender::getPcmData() {
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
             }
         }
+
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
