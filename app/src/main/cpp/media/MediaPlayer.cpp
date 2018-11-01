@@ -86,6 +86,8 @@ int MediaPlayer::prepare() {
         }
     }
 
+    setMediaInfo();
+
     sendMsg(false, ACTION_PLAY_PREPARED);
     //start audio decode thread
     mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
@@ -438,6 +440,37 @@ void MediaPlayer::sendMsg(bool isMain, int type) {
 
 CallJava *MediaPlayer::get() {
     return mCallJava;
+}
+
+jstring MediaPlayer::getInfo(char *name) {
+    if (strcmp("duration", name) == 0) {
+        return get_jni_env()->NewStringUTF(to_char_str(mDuration));
+    } else if (strcmp(name, "rotation") == 0) {
+        return get_jni_env()->NewStringUTF(to_char_str(mRotation));
+    } else if (strcmp(name, "width") == 0) {
+        return get_jni_env()->NewStringUTF(to_char_str(mWidth));
+    } else if (strcmp(name, "height") == 0) {
+        return get_jni_env()->NewStringUTF(to_char_str(mHeight));
+    } else if (strcmp(name, "played_time") == 0) {
+        return get_jni_env()->NewStringUTF(to_char_str(mPlayTime));
+    }
+    return get_jni_env()->NewStringUTF("");;
+}
+
+void MediaPlayer::setMediaInfo() {
+    //rotation
+    AVDictionaryEntry *tag = NULL;
+    tag = av_dict_get(mFormatCtx->streams[mVideoStreamIndex]->metadata, "rotate", tag, 0);
+    if (tag == NULL) {
+        mRotation = 0;
+    } else {
+        int angle = atoi(tag->value);
+        angle %= 360;
+        mRotation = angle;
+    }
+
+    mWidth = mVideoCodecCtx->width;
+    mHeight = mVideoCodecCtx->height;
 }
 
 

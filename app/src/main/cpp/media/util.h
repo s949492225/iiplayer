@@ -26,8 +26,18 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
+#include <sstream>
 #include "../android/android_log.h"
 
 int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext);
+
+template <typename T>
+char *to_char_str(T from) {
+    std::stringstream ss;
+    std::string str;
+    ss << from;
+    ss >> str;
+    return const_cast<char *>(str.c_str());
+}
 
 #endif //IIPLAYER_UTIL_H

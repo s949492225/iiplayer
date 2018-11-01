@@ -34,7 +34,11 @@ private:
     std::thread *mVideoDecodeThread = NULL;
     AVFormatContext *mFormatCtx = NULL;
     const char *mUrl = NULL;
+    //info
     int mDuration = 0;
+    int mRotation = 0;
+    int mWidth = 0;
+    int mHeight = 0;
     //audio
     int mAudioStreamIndex = -1;
     AVCodecContext *mAudioCodecCtx = NULL;
@@ -46,9 +50,9 @@ private:
 
     CallJava *mCallJava;
 
-    void *mGLRender = NULL;
-
     int prepare();
+
+    void setMediaInfo();
 
     void readThread();
 
@@ -84,7 +88,9 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
-    CallJava* get();
+    CallJava *get();
+
+    jstring getInfo(char *string);
 };
 
 

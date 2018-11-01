@@ -22,7 +22,7 @@ int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecCon
 //                break;
 //        }
 //    } else {
-        dec = avcodec_find_decoder(codecParam->codec_id);//软解
+    dec = avcodec_find_decoder(codecParam->codec_id);//软解
 //    }
 
     if (!dec) {
@@ -57,3 +57,4 @@ int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecCon
 
     return 0;
 }
+

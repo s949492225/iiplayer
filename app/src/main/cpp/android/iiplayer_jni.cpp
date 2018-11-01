@@ -32,7 +32,7 @@ void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
         old_player->stop();
         delete old_player;
     }
-    
+
     jfieldID jfd = get_player_native_player_field(env);
     if (player != NULL) {
         env->SetLongField(obj, jfd, (jlong) player);
@@ -101,15 +101,26 @@ static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
     }
 }
 
+static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        const char *cName = env->GetStringUTFChars(name, NULL);
+        char *new_str = strdup(cName);
+        env->ReleaseStringUTFChars(name, cName);
+        return player->getInfo(new_str);
+    }
+}
+
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
 static const JNINativeMethod g_methods[] = {
-        {"nativeOpen",   "(Ljava/lang/String;)V", (void *) nativeOpen},
-        {"nativePlay",   "()V",                   (void *) nativePlay},
-        {"nativePause",  "()V",                   (void *) nativePause},
-        {"nativeResume", "()V",                   (void *) nativeResume},
-        {"nativeSeek",   "(I)V",                  (void *) nativeSeek},
-        {"nativeStop",   "()V",                   (void *) nativeStop}
+        {"nativeOpen",    "(Ljava/lang/String;)V",                  (void *) nativeOpen},
+        {"nativePlay",    "()V",                                    (void *) nativePlay},
+        {"nativePause",   "()V",                                    (void *) nativePause},
+        {"nativeResume",  "()V",                                    (void *) nativeResume},
+        {"nativeSeek",    "(I)V",                                   (void *) nativeSeek},
+        {"nativeStop",    "()V",                                    (void *) nativeStop},
+        {"nativeGetInfo", "(Ljava/lang/String;)Ljava/lang/String;", (void *) nativeGetInfo}
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {

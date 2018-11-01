@@ -22,4 +22,8 @@ public class IIGLSurfaceView extends TextureView {
         return render;
     }
 
+    public void setVideoRotation(int degree) {
+        setRotation(degree);
+    }
+
 }

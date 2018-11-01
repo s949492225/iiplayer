@@ -54,7 +54,6 @@ public class IIMediaPlayer {
         initHandler();
     }
 
-
     public void setDataSource(String url) {
         this.url = url;
     }
@@ -141,17 +140,19 @@ public class IIMediaPlayer {
         Log.d("iiplayer", "onFinish");
     }
 
-    protected native void nativeOpen(String path);
+    private native void nativeOpen(String path);
 
-    protected native void nativePlay();
+    private native void nativePlay();
 
-    protected native void nativePause();
+    private native void nativePause();
 
-    protected native void nativeSeek(int sec);
+    private native void nativeSeek(int sec);
 
-    protected native void nativeResume();
+    private native void nativeResume();
 
-    protected native void nativeStop();
+    private native void nativeStop();
+
+    private native String nativeGetInfo(String name);
 
     protected void initHandler() {
         mHandler = new Handler(Looper.myLooper(), new Handler.Callback() {
@@ -189,6 +190,26 @@ public class IIMediaPlayer {
                 return false;
             }
         });
+    }
+
+    public int getWidth() {
+        return Integer.parseInt(nativeGetInfo("width"));
+    }
+
+    public int getHeight() {
+        return Integer.parseInt(nativeGetInfo("height"));
+    }
+
+    public int getDuration() {
+        return Integer.parseInt(nativeGetInfo("duration"));
+    }
+
+    public int getRotation() {
+        return Integer.parseInt(nativeGetInfo("rotation"));
+    }
+
+    public int getPlayedTime() {
+        return Integer.parseInt(nativeGetInfo("played_time"));
     }
 
 }
