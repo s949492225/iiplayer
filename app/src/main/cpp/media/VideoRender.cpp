@@ -24,12 +24,12 @@ void VideoRender::playThread() {
     while (mStatus != NULL && !mStatus->isExit) {
 
         if (mStatus->isSeek) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 5);
             continue;
         }
 
         if (mStatus->isPause) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 5);
             continue;
         }
 
@@ -39,7 +39,7 @@ void VideoRender::playThread() {
                 mStatus->isLoad = true;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         } else {
             if (mStatus->isLoad) {

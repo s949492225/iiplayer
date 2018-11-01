@@ -4,7 +4,7 @@
 
 #include "MediaPlayer.h"
 
-#define MAX_QUEUE_SIZE (15 * 1024 * 1024)
+#define MAX_QUEUE_SIZE (100)
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
@@ -126,7 +126,8 @@ void MediaPlayer::readThread() {
             continue;
         }
         AVPacket *packet = av_packet_alloc();
-        if (av_read_frame(mFormatCtx, packet) == 0) {
+        int ret;
+        if ((ret = av_read_frame(mFormatCtx, packet)) == 0) {
 
             if (packet->stream_index == mVideoStreamIndex) {
                 mStatus->mVideoQueue->putPacket(packet);
@@ -137,13 +138,21 @@ void MediaPlayer::readThread() {
                 av_free(packet);
             }
         } else {
-            //播放完成
             av_packet_free(&packet);
             av_free(packet);
-            if (LOG_DEBUG) {
-                LOGD("文件读取结束\n");
+            if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb))) {
+                LOGE("文件读完了")
+                break;
             }
-            break;
+            if (mFormatCtx->pb && mFormatCtx->pb->error) {
+                LOGE("文件io出错了")
+                break;
+            }
+            pthread_mutex_lock(&mMutexRead);
+            thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
+            pthread_mutex_unlock(&mMutexRead);
+            LOGE("可能packet莫名出错了")
+            continue;
         }
     }
 }
