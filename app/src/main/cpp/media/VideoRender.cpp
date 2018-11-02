@@ -35,17 +35,8 @@ void VideoRender::playThread() {
 
         if (mQueue->getQueueSize() == 0)//加载中
         {
-            if (!mStatus->isLoad) {
-                mStatus->isLoad = true;
-                mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
-            }
             av_usleep(1000 * 10);
             continue;
-        } else {
-            if (mStatus->isLoad) {
-                mStatus->isLoad = false;
-                mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
-            }
         }
 
         AVFrame *frame = av_frame_alloc();
