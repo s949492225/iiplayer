@@ -382,6 +382,7 @@ void MediaPlayer::handlerSeek() {
     }
     mStatus->isEOF = false;
     mStatus->isSeek = false;
+    sendMsg(false, ACTION_PLAY_SEEK_OVER);
 }
 
 void MediaPlayer::stop() {

@@ -31,10 +31,11 @@ public class IIMediaPlayer {
         static final int ACTION_PLAY = 3;
         static final int ACTION_PLAY_PAUSE = 4;
         static final int ACTION_PLAY_SEEK = 5;
-        static final int ACTION_PLAY_LOADING = 6;
-        static final int ACTION_PLAY_LOADING_OVER = 7;
-        static final int ACTION_PLAY_STOP = 8;
-        static final int ACTION_PLAY_FINISH = 9;
+        static final int ACTION_PLAY_SEEK_OVER = 6;
+        static final int ACTION_PLAY_LOADING = 7;
+        static final int ACTION_PLAY_LOADING_OVER = 8;
+        static final int ACTION_PLAY_STOP = 9;
+        static final int ACTION_PLAY_FINISH = 10;
     }
 
     static {
@@ -164,7 +165,7 @@ public class IIMediaPlayer {
                     case Code.DATA_DURATION:
                         onGetDuration(msg.arg1);
                     case Code.DATA_NOW_PLAYING_TIME:
-                        mPlayTimeListener.onPlayTime(new TimeInfo(msg.arg1,getDuration()));
+                        mPlayTimeListener.onPlayTime(new TimeInfo(msg.arg1, getDuration()));
                     case Code.ACTION_PLAY:
                         onPlaying(true);
                         break;

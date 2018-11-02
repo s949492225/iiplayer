@@ -18,10 +18,11 @@
 #define ACTION_PLAY 3
 #define ACTION_PLAY_PAUSE 4
 #define ACTION_PLAY_SEEK 5
-#define ACTION_PLAY_LOADING 6
-#define ACTION_PLAY_LOADING_OVER 7
-#define ACTION_PLAY_STOP 8
-#define ACTION_PLAY_FINISH 9
+#define ACTION_PLAY_SEEK_OVER 6
+#define ACTION_PLAY_LOADING 7
+#define ACTION_PLAY_LOADING_OVER 8
+#define ACTION_PLAY_STOP 9
+#define ACTION_PLAY_FINISH 10
 
 extern "C" {
 #include <libavcodec/avcodec.h>
