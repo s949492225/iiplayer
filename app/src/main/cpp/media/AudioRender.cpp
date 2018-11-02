@@ -68,8 +68,7 @@ int AudioRender::getPcmData() {
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
             if (frame->pts == duration) {
-                mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
-                mPlayer->release();
+                mStatus->isPlayEnd=true;
             }
 
             if (mStatus && mStatus->isSeek) {
@@ -120,6 +119,9 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
                                                               static_cast<SLuint32>(bufferSize));
             if (result != SL_RESULT_SUCCESS) {
                 LOGE("音频渲染出错\n");
+            }
+            if (render.mStatus->isPlayEnd) {
+                render.mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
             }
         }
     }

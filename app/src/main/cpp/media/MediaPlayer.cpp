@@ -107,7 +107,14 @@ void MediaPlayer::readThread() {
         return;
     }
     //read packet
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mStatus != NULL && !mStatus->isExit && !mStatus->isPlayEnd) {
+
+        if (mStatus->isEOF && !mStatus->isSeek) {
+            pthread_mutex_lock(&mMutexRead);
+            thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
+            pthread_mutex_unlock(&mMutexRead);
+            continue;
+        }
 
         if (mStatus->isSeek) {
             handlerSeek();
@@ -145,10 +152,11 @@ void MediaPlayer::readThread() {
             av_packet_free(&packet);
             av_free(packet);
             if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb))) {
-                LOGE("文件读完了")
-                break;
+                mStatus->isEOF = true;
+                continue;
             }
             if (mFormatCtx->pb && mFormatCtx->pb->error) {
+                sendMsg(false, ERROR_REDAD_EXCEPTION);
                 break;
             }
             pthread_mutex_lock(&mMutexRead);
@@ -356,6 +364,7 @@ void MediaPlayer::handlerSeek() {
     } else {
         LOGE("seek fail")
     }
+    mStatus->isEOF = false;
     mStatus->isSeek = false;
 }
 
@@ -450,7 +459,13 @@ void MediaPlayer::sendMsg(bool isMain, int type, int data) {
     switch (type) {
         case
             ERROR_OPEN_FILE
-            ERROR_FIND_STREAM:
+            ERROR_FIND_STREAM
+            ERROR_AUDIO_DECODEC_EXCEPTION
+            ERROR_VIDEO_DECODEC_EXCEPTION
+            ERROR_REDAD_EXCEPTION:
+            release();
+            break;
+        case ACTION_PLAY_FINISH:
             release();
             break;
         default:

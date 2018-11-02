@@ -20,6 +20,8 @@ public:
     pthread_cond_t mCondRead;
     bool isSeek = false;
     bool isLoad = false;
+    bool isPlayEnd = false;
+    bool isEOF = false;
     int mSeekSec = 0;
 };
 
