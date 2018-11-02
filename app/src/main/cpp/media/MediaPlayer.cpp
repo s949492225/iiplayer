@@ -4,7 +4,7 @@
 
 #include "MediaPlayer.h"
 
-#define MAX_QUEUE_SIZE (100)
+#define MAX_QUEUE_SIZE (1024*1024)
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
