@@ -47,8 +47,6 @@ void VideoRender::playThread() {
                 double frame_time = frame->pts * av_q2d(mTimebase);
                 if (fabs(mStatus->mSeekSec - frame_time) > 0.01) {
                     av_frame_free(&frame);
-                    av_free(frame);
-                    frame = NULL;
                     continue;
                 }
             }
@@ -86,7 +84,7 @@ void VideoRender::playThread() {
                         buffer,
                         AV_PIX_FMT_YUV420P,
                         mWidth,
-                        mWidth,
+                        mHeight,
                         1);
 
                 SwsContext *swsCtx = sws_getContext(
@@ -114,6 +112,9 @@ void VideoRender::playThread() {
                         yuvFrame->data,
                         yuvFrame->linesize);
 
+                sws_freeContext(swsCtx);
+
+
                 double diff = getFrameDiffTime(frame);
                 if (diff < -0.01) {
                     int sleep = -(int) (diff * 1000);
@@ -122,19 +123,21 @@ void VideoRender::playThread() {
                     }
                     av_usleep(static_cast<unsigned int>(sleep * 1000));
                     if (mStatus == NULL || mStatus->isExit) {
+                        av_frame_free(&yuvFrame);
                         av_frame_free(&frame);
+                        av_free(buffer);
                         break;
                     }
                 } else if (diff > 0.05) {
+                    av_frame_free(&yuvFrame);
                     av_frame_free(&frame);
+                    av_free(buffer);
                     continue;
                 }
 
                 renderFrame(yuvFrame);
-
                 av_frame_free(&yuvFrame);
                 av_free(buffer);
-                sws_freeContext(swsCtx);
 
             }
         }
