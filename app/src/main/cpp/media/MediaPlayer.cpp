@@ -220,7 +220,9 @@ void MediaPlayer::decodeVideo() {
                 continue;
             }
             if (!mStatus->isSeek) {
-                mVideoRender->putFrame(frame);
+//                mVideoRender->putFrame(frame);
+            }else{
+                av_frame_free(&frame);
             }
             av_packet_free(&packet);
         } else {
@@ -281,6 +283,8 @@ void MediaPlayer::decodeAudio() {
             }
             if (!mStatus->isSeek) {
                 mAudioRender->putFrame(frame);
+            } else{
+                av_frame_free(&frame);
             }
             av_packet_free(&packet);
         } else {
