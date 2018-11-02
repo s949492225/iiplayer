@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.opengl.IIGLSurfaceView;
@@ -18,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
     private IIMediaPlayer mPlayer;
     private IIGLSurfaceView mVideoView;
     private TextView tv_time;
+    private TextView tv_buffer_time;
     private BubbleSeekBar seekBar;
     private int position;
     private boolean seek = false;
@@ -29,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mVideoView = findViewById(R.id.surface);
         tv_time = findViewById(R.id.tv_time);
+        tv_buffer_time = findViewById(R.id.tv_buffer_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
 //        mPlayer.setDataSource("/sdcard/test.mp4");
@@ -39,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
                 if (lastime != info.getCurrentTime()) {
                     tv_time.setText(
                             Util.secdsToDateFormat(info.getCurrentTime(), info.getTotalTime())
-                                    + ":" +
+                                    + "/" +
                                     Util.secdsToDateFormat(info.getTotalTime(), info.getTotalTime()));
 
                     if (!seek) {
@@ -50,6 +53,15 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
+        });
+        mPlayer.setOnBufferTimeListener(new OnBufferTimeListener() {
+            @Override
+            public void onBufferTime(TimeInfo info) {
+                tv_buffer_time.setText(
+                        Util.secdsToDateFormat(info.getCurrentTime(), info.getTotalTime())
+                                + "/" +
+                                Util.secdsToDateFormat(info.getTotalTime(), info.getTotalTime()));
+            }
         });
 
         seekBar.setOnProgressChangedListener(new BubbleSeekBar.OnProgressChangedListener() {

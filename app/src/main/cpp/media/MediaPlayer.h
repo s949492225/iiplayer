@@ -62,6 +62,8 @@ private:
 
     void decodeVideo();
 
+    void seekErrorPos(int sec);
+
     int friend ioInterruptCallback(void *ctx);
 
 public:
@@ -90,11 +92,11 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
-    CallJava *get();
+    CallJava *getCallJava();
 
     jstring getInfo(char *string);
 
-    void seekErrorPos(int sec);
+    void checkBuffer(AVPacket *pPacket);
 };
 
 

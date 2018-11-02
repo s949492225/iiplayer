@@ -139,11 +139,11 @@ void MediaPlayer::readThread() {
         AVPacket *packet = av_packet_alloc();
         int ret;
         if ((ret = av_read_frame(mFormatCtx, packet)) == 0) {
-
             if (packet->stream_index == mVideoStreamIndex) {
                 mStatus->mVideoQueue->putPacket(packet);
             } else if (packet->stream_index == mAudioStreamIndex) {
                 mStatus->mAudioQueue->putPacket(packet);
+                checkBuffer(packet);
             } else {
                 av_packet_free(&packet);
                 av_free(packet);
@@ -162,9 +162,13 @@ void MediaPlayer::readThread() {
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
-            continue;
         }
     }
+}
+
+void MediaPlayer::checkBuffer(AVPacket *packet) {
+    double cachedTime = packet->pts * av_q2d(mAudioRender->mTimebase);
+    mCallJava->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
 
 long getCurrentTime() {
@@ -309,7 +313,6 @@ void MediaPlayer::decodeAudio() {
     }
 }
 
-
 void MediaPlayer::play() {
     if (mStatus && mAudioRender) {
         mStatus->isPause = false;
@@ -390,7 +393,6 @@ void MediaPlayer::stop() {
     release();
 
 }
-
 
 void MediaPlayer::release() {
 
@@ -498,7 +500,7 @@ void MediaPlayer::sendMsg(bool isMain, int type) {
     sendMsg(isMain, type, NO_ARG);
 }
 
-CallJava *MediaPlayer::get() {
+CallJava *MediaPlayer::getCallJava() {
     return mCallJava;
 }
 
@@ -532,6 +534,5 @@ void MediaPlayer::setMediaInfo() {
     mWidth = mVideoCodecCtx->width;
     mHeight = mVideoCodecCtx->height;
 }
-
 
 

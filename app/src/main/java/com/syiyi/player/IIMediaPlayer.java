@@ -5,6 +5,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.opengl.Render;
@@ -15,9 +16,11 @@ public class IIMediaPlayer {
     private String url = null;
     @SuppressWarnings("unused")
     private long mNativePlayer;
+    private int mDuration;
     private Handler mHandler;
     private OnPrepareListener mPrepareListener;
     private OnPlayTimeListener mPlayTimeListener;
+    private OnBufferTimeListener mBufferTimeListener;
     private Render mRender;
 
     @SuppressWarnings("unused")
@@ -26,6 +29,7 @@ public class IIMediaPlayer {
         static final int ERROR_FIND_STREAM = -2;
         static final int DATA_DURATION = 100;
         static final int DATA_NOW_PLAYING_TIME = 101;
+        static final int DATA_BUFFER_TIME = 102;
         static final int ACTION_PLAY_PREPARE = 1;
         static final int ACTION_PLAY_PREPARED = 2;
         static final int ACTION_PLAY = 3;
@@ -123,10 +127,10 @@ public class IIMediaPlayer {
 
     protected void onGetDuration(int sec) {
         Log.d("iiplayer", "onGetDuration");
+        mDuration = sec;
     }
 
     protected void onPlaying(boolean isPlay) {
-//        Log.d("iiplayer", "onPlaying:" + isPlay);
     }
 
     protected void onLoading(boolean isLoad) {
@@ -165,7 +169,11 @@ public class IIMediaPlayer {
                     case Code.DATA_DURATION:
                         onGetDuration(msg.arg1);
                     case Code.DATA_NOW_PLAYING_TIME:
-                        mPlayTimeListener.onPlayTime(new TimeInfo(msg.arg1, getDuration()));
+                        onPlayTimeUpdate(msg.arg1);
+                        break;
+                    case Code.DATA_BUFFER_TIME:
+                        onBufferTimeUpdate(msg.arg1);
+                        break;
                     case Code.ACTION_PLAY:
                         onPlaying(true);
                         break;
@@ -189,8 +197,22 @@ public class IIMediaPlayer {
         });
     }
 
+    private void onBufferTimeUpdate(int arg1) {
+        mBufferTimeListener.onBufferTime(new TimeInfo(arg1, getDuration()));
+
+    }
+
+    private void onPlayTimeUpdate(int arg1) {
+        mPlayTimeListener.onPlayTime(new TimeInfo(arg1, getDuration()));
+
+    }
+
     public void setOnPlayTimeListener(OnPlayTimeListener listener) {
         mPlayTimeListener = listener;
+    }
+
+    public void setOnBufferTimeListener(OnBufferTimeListener listener) {
+        mBufferTimeListener = listener;
     }
 
 
@@ -207,7 +229,11 @@ public class IIMediaPlayer {
     }
 
     public int getRotation() {
-        return Integer.parseInt(nativeGetInfo("rotation"));
+        String msg = nativeGetInfo("rotation");
+        if (msg == null)
+            return mDuration;
+        else
+            return Integer.parseInt(msg);
     }
 
     public int getPlayedTime() {

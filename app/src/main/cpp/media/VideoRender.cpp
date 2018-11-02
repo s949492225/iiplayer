@@ -145,7 +145,7 @@ void VideoRender::playThread() {
 }
 
 void VideoRender::renderFrame(AVFrame *yuvFrame) const {
-    mPlayer->get()->setFrameData(false, yuvFrame);
+    mPlayer->getCallJava()->setFrameData(false, yuvFrame);
 }
 
 double VideoRender::getFrameDiffTime(AVFrame *avFrame) {

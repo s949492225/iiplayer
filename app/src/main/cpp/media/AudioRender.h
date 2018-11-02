@@ -28,7 +28,6 @@ private:
     int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
-    AVRational mTimebase;
     int64_t duration;
     FrameQueue *mQueue = NULL;
     int mMaxQueueSize = 40;
@@ -66,6 +65,7 @@ private:
 
 public:
     MediaPlayer *mPlayer = NULL;
+    AVRational mTimebase;
 
     AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext,AVRational timebase);
 
