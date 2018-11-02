@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.syiyi.player.listener.OnBufferTimeListener;
@@ -34,8 +33,8 @@ public class MainActivity extends AppCompatActivity {
         tv_buffer_time = findViewById(R.id.tv_buffer_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
-//        mPlayer.setDataSource("/sdcard/test.mp4");
-        mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
+        mPlayer.setDataSource("/sdcard/DCIM/Camera/VID_20181102_173516.mp4");
+//        mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
         mPlayer.setOnPlayTimeListener(new OnPlayTimeListener() {
             @Override
             public void onPlayTime(TimeInfo info) {
@@ -46,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
                                     Util.secdsToDateFormat(info.getTotalTime(), info.getTotalTime()));
 
                     if (!seek) {
-                        seekBar.setProgress(info.getCurrentTime() * 100 / info.getTotalTime());
+                        seekBar.setProgress(info.getCurrentTime() * 100f / info.getTotalTime());
                     }
                     lastime = info.getCurrentTime();
                 }

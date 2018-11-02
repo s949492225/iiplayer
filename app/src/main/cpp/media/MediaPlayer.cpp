@@ -146,11 +146,9 @@ void MediaPlayer::readThread() {
                 checkBuffer(packet);
             } else {
                 av_packet_free(&packet);
-                av_free(packet);
             }
         } else {
             av_packet_free(&packet);
-            av_free(packet);
             if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb) == 0)) {
                 mStatus->isEOF = true;
                 continue;
