@@ -9,7 +9,7 @@ VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRa
     mStatus = player->mStatus;
     mPixFmt = codecContext->pix_fmt;
     mTimebase = timebase;
-    mQueue = new FrameQueue(mStatus);
+    mQueue = new FrameQueue(mStatus, const_cast<char *>("video"));
     mWidth = codecContext->width;
     mHeight = codecContext->height;
 
@@ -52,15 +52,31 @@ void VideoRender::playThread() {
         int ret = mQueue->getFrame(frame);
 
         if (ret == 0) {
+            if (mStatus && mStatus->isSeek) {
+                double frame_time = frame->pts * av_q2d(mTimebase);
+                if (fabs(mStatus->mSeekSec - frame_time) > 0.01) {
+                    av_frame_free(&frame);
+                    av_free(frame);
+                    frame = NULL;
+                    continue;
+                }
+            }
 
             if (frame->format == AV_PIX_FMT_YUV420P) {
                 double diff = getFrameDiffTime(frame);
-                if (diff < 0) {
-                    av_usleep(static_cast<unsigned int>(-diff * 1000000));
+                if (diff < -0.01) {
+                    int sleep = -(int) (diff * 1000);
+                    if (fabs(sleep) > 50) {
+                        sleep = 50;
+                    }
+                    av_usleep(static_cast<unsigned int>(sleep * 1000));
                     if (mStatus == NULL || mStatus->isExit) {
                         av_frame_free(&frame);
                         break;
                     }
+                } else if (diff > 0.05) {
+                    av_frame_free(&frame);
+                    continue;
                 }
                 renderFrame(frame);
             } else {
@@ -109,17 +125,26 @@ void VideoRender::playThread() {
 
                 double diff = getFrameDiffTime(frame);
                 if (diff < -0.01) {
-                    av_usleep(static_cast<unsigned int>(-diff * 1000000));
+                    int sleep = -(int) (diff * 1000);
+                    if (fabs(sleep) > 50) {
+                        sleep = 50;
+                    }
+                    av_usleep(static_cast<unsigned int>(sleep * 1000));
                     if (mStatus == NULL || mStatus->isExit) {
                         av_frame_free(&frame);
                         break;
                     }
+                } else if (diff > 0.05) {
+                    av_frame_free(&frame);
+                    continue;
                 }
+
                 renderFrame(yuvFrame);
 
                 av_frame_free(&yuvFrame);
                 av_free(buffer);
                 sws_freeContext(swsCtx);
+
             }
         }
         av_frame_free(&frame);
@@ -140,7 +165,6 @@ double VideoRender::getFrameDiffTime(AVFrame *avFrame) {
     pts *= av_q2d(mTimebase);
 
     if (pts == 0) {
-        LOGE("pts==0")
         return 0;
     }
 

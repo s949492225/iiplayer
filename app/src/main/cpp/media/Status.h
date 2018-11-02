@@ -18,7 +18,6 @@ public:
     PacketQueue *mAudioQueue = NULL;
     PacketQueue *mVideoQueue = NULL;
     pthread_cond_t mCondRead;
-    int mMaxQueueSize = 100;
     bool isSeek = false;
     bool isLoad = false;
     int mSeekSec = 0;

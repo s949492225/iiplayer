@@ -117,14 +117,18 @@ void MediaPlayer::readThread() {
             av_usleep(1000 * 10);
             continue;
         }
-
-        if (mStatus->mVideoQueue->getQueueSize() + mStatus->mVideoQueue->getQueueSize() >
-            MAX_QUEUE_SIZE) {
+        bool isSizeOver =
+                mStatus->mVideoQueue->getQueueSize() + mStatus->mAudioQueue->getQueueSize() >
+                MAX_QUEUE_SIZE;
+        bool isAudioNeed = mStatus->mAudioQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isVideoNeed = mStatus->mVideoQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        if (isSizeOver && isAudioNeed && isVideoNeed) {
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
             continue;
         }
+
         AVPacket *packet = av_packet_alloc();
         int ret;
         if ((ret = av_read_frame(mFormatCtx, packet)) == 0) {
@@ -145,13 +149,11 @@ void MediaPlayer::readThread() {
                 break;
             }
             if (mFormatCtx->pb && mFormatCtx->pb->error) {
-                LOGE("文件io出错了")
                 break;
             }
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
-            LOGE("可能packet莫名出错了")
             continue;
         }
     }
@@ -172,7 +174,6 @@ void MediaPlayer::decodeVideo() {
     int ret = 0;
 
     while (mStatus != NULL && !mStatus->isExit) {
-
         if (mStatus->isSeek) {
             av_usleep(1000 * 100);
             continue;
@@ -190,7 +191,7 @@ void MediaPlayer::decodeVideo() {
             packet = NULL;
             continue;
         }
-//        long time0 = getCurrentTime();
+        long time0 = getCurrentTime();
         ret = avcodec_send_packet(mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
@@ -202,7 +203,7 @@ void MediaPlayer::decodeVideo() {
         frame = av_frame_alloc();
         ret = avcodec_receive_frame(mVideoCodecCtx, frame);
         long time1 = getCurrentTime();
-//        LOGD("解码的时长:%ld", time1 - time0);
+        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
             while (mStatus != NULL && !mStatus->isExit && mVideoRender->isQueueFull()) {
@@ -343,7 +344,7 @@ void MediaPlayer::seek(int sec) {
 void MediaPlayer::handlerSeek() {
     //seek io
     int64_t rel = mStatus->mSeekSec * AV_TIME_BASE;
-    int ret = avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
+    int ret = avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
         //clear
         mStatus->mAudioQueue->clearAll();

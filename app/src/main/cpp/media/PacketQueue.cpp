@@ -5,8 +5,9 @@
 #include "PacketQueue.h"
 #include "Status.h"
 
-PacketQueue::PacketQueue(Status *status) {
-    this->mStatus = status;
+PacketQueue::PacketQueue(Status *status, char *name) {
+    mStatus = status;
+    mName = name;
     pthread_mutex_init(&mMutex, NULL);
     pthread_cond_init(&mCond, NULL);
 }

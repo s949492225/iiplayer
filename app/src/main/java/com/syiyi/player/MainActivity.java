@@ -11,15 +11,17 @@ import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.opengl.IIGLSurfaceView;
 import com.syiyi.player.opengl.Render;
+import com.xw.repo.BubbleSeekBar;
 
 @SuppressLint("all")
 public class MainActivity extends AppCompatActivity {
     private IIMediaPlayer mPlayer;
     private IIGLSurfaceView mVideoView;
     private TextView tv_time;
-    private SeekBar seekBar;
+    private BubbleSeekBar seekBar;
     private int position;
     private boolean seek = false;
+    int lastime = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,40 +31,44 @@ public class MainActivity extends AppCompatActivity {
         tv_time = findViewById(R.id.tv_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
-        mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
+        mPlayer.setDataSource("/sdcard/test.mp4");
+//        mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
         mPlayer.setOnPlayTimeListener(new OnPlayTimeListener() {
             @Override
             public void onPlayTime(TimeInfo info) {
-                tv_time.setText(
-                        Util.secdsToDateFormat(info.getCurrentTime(), info.getTotalTime())
-                                + ":" +
-                                Util.secdsToDateFormat(info.getTotalTime(), info.getTotalTime()));
+                if (lastime != info.getCurrentTime()) {
+                    tv_time.setText(
+                            Util.secdsToDateFormat(info.getCurrentTime(), info.getTotalTime())
+                                    + ":" +
+                                    Util.secdsToDateFormat(info.getTotalTime(), info.getTotalTime()));
 
-                if (!seek) {
-                    seekBar.setProgress(info.getCurrentTime() * 100 / info.getTotalTime());
+                    if (!seek) {
+                        seekBar.setProgress(info.getCurrentTime() * 100 / info.getTotalTime());
+                    }
+                    lastime = info.getCurrentTime();
                 }
 
             }
+
         });
 
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        seekBar.setOnProgressChangedListener(new BubbleSeekBar.OnProgressChangedListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            public void onProgressChanged(BubbleSeekBar bubbleSeekBar, int progress, float progressFloat, boolean fromUser) {
                 position = progress * mPlayer.getDuration() / 100;
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                seek = true;
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+            public void getProgressOnActionUp(BubbleSeekBar bubbleSeekBar, int progress, float progressFloat) {
                 mPlayer.seek(position);
                 seek = false;
             }
-        });
 
+            @Override
+            public void getProgressOnFinally(BubbleSeekBar bubbleSeekBar, int progress, float progressFloat, boolean fromUser) {
+
+            }
+        });
     }
 
     public void play(View view) {

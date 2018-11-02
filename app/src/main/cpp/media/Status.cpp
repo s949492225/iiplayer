@@ -6,8 +6,8 @@
 
 Status::Status() {
     pthread_cond_init(&mCondRead, NULL);
-    mAudioQueue = new PacketQueue(this);
-    mVideoQueue = new PacketQueue(this);
+    mAudioQueue = new PacketQueue(this, "audio");
+    mVideoQueue = new PacketQueue(this, "video");
 }
 
 Status::~Status() {

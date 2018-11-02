@@ -17,18 +17,19 @@ class Status;
 
 class FrameQueue {
 private:
+    char *mName;
     std::queue<AVFrame *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
-    Status *mStatus=NULL;
+    Status *mStatus = NULL;
 public:
-    FrameQueue(Status *status);
+    FrameQueue(Status *status, char *name);
 
     ~FrameQueue();
 
     int putFrame(AVFrame *packet);
 
-    int getFrame(AVFrame* frame);
+    int getFrame(AVFrame *frame);
 
     int getQueueSize();
 

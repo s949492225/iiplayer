@@ -5,8 +5,10 @@
 #include "FrameQueue.h"
 #include "Status.h"
 
-FrameQueue::FrameQueue(Status *status) {
-    this->mStatus = status;
+
+FrameQueue::FrameQueue(Status *status, char *name) {
+    mStatus = status;
+    mName = name;
     pthread_mutex_init(&mMutex, NULL);
     pthread_cond_init(&mCond, NULL);
 }

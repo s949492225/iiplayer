@@ -11,7 +11,7 @@ AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *
     this->duration = duration;
     mSampleRate = codecContext->sample_rate;
     mTimebase = timebase;
-    mQueue = new FrameQueue(mStatus);
+    mQueue = new FrameQueue(mStatus, const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
     initSwrCtx(codecContext);
@@ -67,10 +67,19 @@ int AudioRender::getPcmData() {
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
-
             if (frame->pts == duration) {
                 mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
                 mPlayer->release();
+            }
+
+            if (mStatus && mStatus->isSeek) {
+                double frame_time = frame->pts * av_q2d(mTimebase);
+                if (fabs(mStatus->mSeekSec - frame_time) > 0.01) {
+                    av_frame_free(&frame);
+                    av_free(frame);
+                    frame = NULL;
+                    return 0;
+                }
             }
 
             if (frame->channels && frame->channel_layout == 0) {
@@ -84,7 +93,7 @@ int AudioRender::getPcmData() {
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            mPlayer->mClock = frame->pts * av_q2d(mTimebase);;
+            mPlayer->mClock = frame->pts * av_q2d(mTimebase);
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;

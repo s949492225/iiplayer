@@ -273,6 +273,11 @@ public class Render implements TextureView.SurfaceTextureListener, SurfaceTextur
                 mEgl.eglSwapBuffers(mEGLDisplay, mEglSurface);
                 frameAvailable = false;
             }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

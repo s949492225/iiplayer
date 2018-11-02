@@ -18,12 +18,13 @@ class Status;
 
 class PacketQueue {
 private:
+    char *mName;
     std::queue<AVPacket *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
     Status *mStatus = NULL;
 public:
-    PacketQueue(Status *status);
+    PacketQueue(Status *status, char *name);
 
     ~PacketQueue();
 
