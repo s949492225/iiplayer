@@ -4,44 +4,84 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:ignore="HardcodedText">
 
-    <Button
+    <com.syiyi.player.opengl.IIGLSurfaceView
+        android:id="@+id/surface"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="开始"
-        android:onClick="play"/>
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="停止"
-        android:onClick="stop"/>
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="暂停"
-        android:onClick="pause"/>
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="播放"
-        android:onClick="resume"/>
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Seek"
-        android:onClick="seek"/>
+        android:layout_height="250dp" />
 
     <TextView
         android:id="@+id/tv_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#222222"
-        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="20dp"
-        android:text="00:00/00:00"/>
+        android:text="00:00/00:00"
+        android:textColor="#222222" />
+
+    <TextView
+        android:id="@+id/tv_buffer_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
+        android:text="00:00/00:00"
+        android:textColor="#222222" />
+
+    <com.xw.repo.BubbleSeekBar
+        android:id="@+id/seekbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:bsb_bubble_color="#57F403"
+        app:bsb_bubble_text_color="@color/colorPrimaryDark"
+        app:bsb_max="100"
+        app:bsb_min="0"
+        app:bsb_progress="0"
+        app:bsb_section_count="1"
+        app:bsb_second_track_color="#3F51B5"
+        app:bsb_section_text_position="bottom_sides"
+        app:bsb_show_progress_in_float="true"
+        app:bsb_show_section_mark="true"
+        app:bsb_show_section_text="true"
+        app:bsb_show_thumb_text="true"
+        app:bsb_track_color="#838383" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="play"
+            android:text="开始" />
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="pause"
+            android:text="暂停" />
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="resume"
+            android:text="播放" />
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="stop"
+            android:text="停止" />
+
+    </LinearLayout>
 
 </LinearLayout>

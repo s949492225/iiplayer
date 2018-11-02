@@ -4,28 +4,41 @@
 
 #include "iiplayer_jni.h"
 #include "android_log.h"
-#include "../media/media_player.h"
+#include "../media/MediaPlayer.h"
+
+extern "C" {
+#include <libavcodec/jni.h>
+}
+
+
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
 
-jfieldID get_player_field(JNIEnv *env) {
+jfieldID get_player_native_player_field(JNIEnv *env) {
     jclass jcs = env->FindClass(IIMediaPlayer);
     return env->GetFieldID(jcs, "mNativePlayer", "J");
 }
 
-media_player *get_media_player(JNIEnv *env, jobject obj) {
-    jfieldID jfd = get_player_field(env);
-    return reinterpret_cast<media_player *>(env->GetLongField(obj, jfd));
+
+MediaPlayer *get_media_player(JNIEnv *env, jobject obj) {
+    jfieldID jfd = get_player_native_player_field(env);
+    return reinterpret_cast<MediaPlayer *>(env->GetLongField(obj, jfd));
 }
 
-void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
+void set_media_player(JNIEnv *env, jobject obj, MediaPlayer *player) {
     //release old
-    media_player *old_player = get_media_player(env, obj);
+    MediaPlayer *old_player = get_media_player(env, obj);
+
     if (old_player != NULL) {
+        old_player->stop();
         delete old_player;
     }
 
-    jfieldID jfd = get_player_field(env);
-    env->SetLongField(obj, jfd, reinterpret_cast<jlong>(player));
+    jfieldID jfd = get_player_native_player_field(env);
+    if (player != NULL) {
+        env->SetLongField(obj, jfd, (jlong) player);
+    } else {
+        env->SetLongField(obj, jfd, 0);
+    }
 }
 
 /**
@@ -33,59 +46,84 @@ void set_media_player(JNIEnv *env, jobject obj, media_player *player) {
  * @param env
  * @param obj
  */
-static void JNICALL nativeInit(JNIEnv *env, jobject obj) {
-    media_player *old_player = get_media_player(env, obj);
-    if (old_player) {
-        old_player->stop();
-        delete old_player;
-    }
-    media_player *player = new media_player();
+static void JNICALL init(JNIEnv *env, jobject obj) {
+    MediaPlayer *player = new MediaPlayer(get_jni_jvm(), env, obj);
     set_media_player(env, obj, player);
 }
 
 static void JNICALL nativeOpen(JNIEnv *env, jobject obj, jstring url) {
+    init(env, obj);
+
     const char *str_c = env->GetStringUTFChars(url, NULL);
     char *new_str = strdup(str_c);
     env->ReleaseStringUTFChars(url, str_c);
 
-    media_player *player = get_media_player(env, obj);
+    MediaPlayer *player = get_media_player(env, obj);
     player->open(new_str);
 }
 
 static void JNICALL nativePlay(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
-    player->play();
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        player->play();
+    }
 }
 
 static void JNICALL nativePause(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
-    player->pause();
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        player->pause();
+    }
 }
 
 static void JNICALL nativeResume(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
-    player->resume();
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        player->resume();
+    }
+}
+
+static void JNICALL nativeSeek(JNIEnv *env, jobject obj, jint sec) {
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        player->seek(sec);
+    }
 }
 
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
-    media_player *player = get_media_player(env, obj);
-    player->stop();
-    delete player;
-    set_media_player(env, obj, nullptr);
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        set_media_player(env, obj, NULL);
+    }
+}
+
+static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        const char *cName = env->GetStringUTFChars(name, NULL);
+        char *new_str = strdup(cName);
+        env->ReleaseStringUTFChars(name, cName);
+        return player->getInfo(new_str);
+    } else {
+        return NULL;
+    }
 }
 
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
 static const JNINativeMethod g_methods[] = {
-        {"nativeInit",   "()V",                   (void *) nativeInit},
-        {"nativeOpen",   "(Ljava/lang/String;)V", (void *) nativeOpen},
-        {"nativePlay",   "()V",                   (void *) nativePlay},
-        {"nativePause",  "()V",                   (void *) nativePause},
-        {"nativeResume", "()V",                   (void *) nativeResume},
-        {"nativeStop",   "()V",                   (void *) nativeStop}
+        {"nativeOpen",    "(Ljava/lang/String;)V",                  (void *) nativeOpen},
+        {"nativePlay",    "()V",                                    (void *) nativePlay},
+        {"nativePause",   "()V",                                    (void *) nativePause},
+        {"nativeResume",  "()V",                                    (void *) nativeResume},
+        {"nativeSeek",    "(I)V",                                   (void *) nativeSeek},
+        {"nativeStop",    "()V",                                    (void *) nativeStop},
+        {"nativeGetInfo", "(Ljava/lang/String;)Ljava/lang/String;", (void *) nativeGetInfo}
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
+    av_jni_set_java_vm(vm, reserved);
+
     JNIEnv *env = NULL;
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4) != JNI_OK) {
         __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:GetEnv failed\n");
@@ -104,6 +142,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
     return JNI_VERSION_1_4;
 }
 
+JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved) {
+    __android_log_print(ANDROID_LOG_INFO, "native", "JNI_OnUnload");
+    //release
+    JNIEnv *env = get_jni_env();
+    jclass cls = env->FindClass(IIMediaPlayer);
+    env->UnregisterNatives(cls);
+
+    g_jvm = NULL;
+}
+
+
 JNIEXPORT JavaVM *get_jni_jvm(void) {
     return g_jvm;
 }
@@ -115,16 +164,15 @@ JNIEXPORT JNIEnv *get_jni_env(void) {
         return NULL;
     }
     int status = g_jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4);
-    if (status != JNI_OK) {
-        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR:get_jni_env GetEnv failed\n");
-        return NULL;
+    if (status < 0) {
+        status = g_jvm->AttachCurrentThread(&env, NULL);
+        if (status != JNI_OK) {
+            __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni",
+                                "ERROR:get_jni_env attach current thread failed\n");
+            return NULL;
+        }
     }
-    status = g_jvm->AttachCurrentThread(&env, NULL);
-    if (status != JNI_OK) {
-        __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni",
-                            "ERROR:get_jni_env attach current thread failed\n");
-        return NULL;
-    }
+
     return env;
 
 }
