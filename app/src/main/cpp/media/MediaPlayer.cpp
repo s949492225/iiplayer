@@ -197,16 +197,12 @@ void MediaPlayer::decodeVideo() {
         packet = av_packet_alloc();
         if (mStatus->mVideoQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
             continue;
         }
 //        long time0 = getCurrentTime();
         ret = avcodec_send_packet(mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
             continue;
         }
 
@@ -220,23 +216,16 @@ void MediaPlayer::decodeVideo() {
                 av_usleep(1000 * 5);
             }
             if (mStatus == NULL || mStatus->isExit) {
+                av_frame_free(&frame);
                 continue;
             }
             if (!mStatus->isSeek) {
                 mVideoRender->putFrame(frame);
             }
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
         } else {
-
             av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
-
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
         }
     }
 }
@@ -264,15 +253,11 @@ void MediaPlayer::decodeAudio() {
         packet = av_packet_alloc();
         if (mStatus->mAudioQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
             continue;
         }
         ret = avcodec_send_packet(mAudioCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
             continue;
         }
 
@@ -291,22 +276,16 @@ void MediaPlayer::decodeAudio() {
                 av_usleep(1000 * 5);
             }
             if (mStatus == NULL || mStatus->isExit) {
+                av_frame_free(&frame);
                 continue;
             }
             if (!mStatus->isSeek) {
                 mAudioRender->putFrame(frame);
             }
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
         } else {
             av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
-
             av_packet_free(&packet);
-            av_free(packet);
-            packet = NULL;
         }
     }
 }
