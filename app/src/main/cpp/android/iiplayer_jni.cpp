@@ -104,6 +104,8 @@ static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
         char *new_str = strdup(cName);
         env->ReleaseStringUTFChars(name, cName);
         return player->getInfo(new_str);
+    } else {
+        return NULL;
     }
 }
 

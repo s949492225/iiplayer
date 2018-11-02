@@ -151,13 +151,13 @@ void MediaPlayer::readThread() {
         } else {
             av_packet_free(&packet);
             av_free(packet);
-            if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb))) {
+            if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb) == 0)) {
                 mStatus->isEOF = true;
                 continue;
             }
             if (mFormatCtx->pb && mFormatCtx->pb->error) {
                 sendMsg(false, ERROR_REDAD_EXCEPTION);
-                break;
+                seekErrorPos(static_cast<int>(mClock));
             }
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mStatus->mCondRead, &mMutexRead, 10);
@@ -199,7 +199,7 @@ void MediaPlayer::decodeVideo() {
             packet = NULL;
             continue;
         }
-        long time0 = getCurrentTime();
+//        long time0 = getCurrentTime();
         ret = avcodec_send_packet(mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
@@ -211,7 +211,7 @@ void MediaPlayer::decodeVideo() {
         frame = av_frame_alloc();
         ret = avcodec_receive_frame(mVideoCodecCtx, frame);
         long time1 = getCurrentTime();
-        LOGD("解码的时长:%ld", time1 - time0);
+//        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
             while (mStatus != NULL && !mStatus->isExit && mVideoRender->isQueueFull()) {
@@ -346,6 +346,22 @@ void MediaPlayer::seek(int sec) {
     mStatus->mSeekSec = rel;
     mStatus->isSeek = true;
     sendMsg(true, ACTION_PLAY_SEEK);
+    pthread_cond_signal(&mStatus->mCondRead);
+}
+
+/**
+ * 网络波动下自动修复
+ * */
+void MediaPlayer::seekErrorPos(int sec) {
+    int rel = 0;
+    if (sec < 0)
+        rel = 0;
+    if (rel > mDuration)
+        rel = mDuration;
+    else
+        rel = sec;
+    mStatus->mSeekSec = rel;
+    mStatus->isSeek = true;
     pthread_cond_signal(&mStatus->mCondRead);
 }
 

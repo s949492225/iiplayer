@@ -93,6 +93,8 @@ public:
     CallJava *get();
 
     jstring getInfo(char *string);
+
+    void seekErrorPos(int sec);
 };
 
 
