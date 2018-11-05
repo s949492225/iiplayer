@@ -48,7 +48,7 @@ int AudioRender::getPcmData() {
             continue;
         }
 
-        if (mQueue->getQueueSize() == 0)//加载中
+        if (mQueue && mQueue->getQueueSize() == 0)//加载中
         {
 
             if (!mStatus->isLoad) {
@@ -68,7 +68,7 @@ int AudioRender::getPcmData() {
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
             if (frame->pts == duration) {
-                mStatus->isPlayEnd=true;
+                mStatus->isPlayEnd = true;
             }
 
             if (mStatus && mStatus->isSeek) {
@@ -301,7 +301,9 @@ void AudioRender::notifyWait() {
 }
 
 void AudioRender::putFrame(AVFrame *frame) {
-    mQueue->putFrame(frame);
+    if (mQueue) {
+        mQueue->putFrame(frame);
+    }
 }
 
 void AudioRender::clearQueue() {

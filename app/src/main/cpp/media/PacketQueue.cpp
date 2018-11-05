@@ -5,9 +5,10 @@
 #include "PacketQueue.h"
 #include "Status.h"
 
-PacketQueue::PacketQueue(Status *status, char *name) {
+PacketQueue::PacketQueue(Status *status,pthread_cond_t condContinue, char *name) {
     mStatus = status;
     mName = name;
+    mCondContinue=condContinue;
     pthread_mutex_init(&mMutex, NULL);
     pthread_cond_init(&mCond, NULL);
 }
@@ -44,7 +45,7 @@ int PacketQueue::getPacket(AVPacket *packet) {
             }
             break;
         } else {
-            pthread_cond_signal(&mStatus->mCondRead);
+            pthread_cond_signal(&mCondContinue);
             pthread_cond_wait(&mCond, &mMutex);
         }
     }

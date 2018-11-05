@@ -5,9 +5,10 @@
 #include "AudioDecoder.h"
 #include "MediaPlayer.h"
 
-AudioDecoder::AudioDecoder(MediaPlayer *player) {
+AudioDecoder::AudioDecoder(MediaPlayer *player, PacketQueue *queue) {
     mPlayer = player;
     mStatus = player->mStatus;
+    mQueue = queue;
 }
 
 AudioDecoder::~AudioDecoder() {
@@ -44,7 +45,7 @@ void AudioDecoder::decode() {
         }
 
         packet = av_packet_alloc();
-        if (mStatus->mAudioQueue->getPacket(packet) != 0) {
+        if (mQueue && mQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
             continue;
         }
@@ -73,7 +74,7 @@ void AudioDecoder::decode() {
                 av_frame_free(&frame);
                 continue;
             }
-            if (!mStatus->isSeek) {
+            if (mPlayer->getAudioRender()&&!mStatus->isSeek) {
                 mPlayer->getAudioRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);

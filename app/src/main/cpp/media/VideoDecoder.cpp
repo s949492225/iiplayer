@@ -5,9 +5,10 @@
 #include "VideoDecoder.h"
 #include "MediaPlayer.h"
 
-VideoDecoder::VideoDecoder(MediaPlayer *player) {
+VideoDecoder::VideoDecoder(MediaPlayer *player, PacketQueue *queue) {
     mPlayer = player;
     mStatus = player->mStatus;
+    mQueue = queue;
 }
 
 VideoDecoder::~VideoDecoder() {
@@ -49,7 +50,7 @@ void VideoDecoder::decode() {
         }
 
         packet = av_packet_alloc();
-        if (mStatus->mVideoQueue->getPacket(packet) != 0) {
+        if (mQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
             continue;
         }
@@ -66,14 +67,15 @@ void VideoDecoder::decode() {
 //        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
-            while (mStatus != NULL && !mStatus->isExit && mPlayer->getVideoRender()->isQueueFull()) {
+            while (mStatus != NULL && !mStatus->isExit &&
+                   mPlayer->getVideoRender()->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
             if (mStatus == NULL || mStatus->isExit) {
                 av_frame_free(&frame);
                 continue;
             }
-            if (!mStatus->isSeek) {
+            if (mPlayer->getVideoRender()&&!mStatus->isSeek) {
                 mPlayer->getVideoRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);

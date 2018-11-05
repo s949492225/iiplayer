@@ -15,9 +15,8 @@ public:
 
     bool isExit = false;
     bool isPause = true;
-    PacketQueue *mAudioQueue = NULL;
-    PacketQueue *mVideoQueue = NULL;
-    pthread_cond_t mCondRead;
+
+
     bool isSeek = false;
     bool isLoad = false;
     bool isPlayEnd = false;

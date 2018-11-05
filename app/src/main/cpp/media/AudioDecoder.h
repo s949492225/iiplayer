@@ -25,12 +25,13 @@ private:
     MediaPlayer *mPlayer = NULL;
     Status *mStatus = NULL;
     std::thread *mDecodeThread = NULL;
-    AVCodecContext *mCoderCtx;
+    AVCodecContext *mCoderCtx=NULL;
+    PacketQueue *mQueue = NULL;
 
     void decode();
 
 public:
-    AudioDecoder(MediaPlayer *player);
+    AudioDecoder(MediaPlayer *player,PacketQueue *queue);
 
     ~AudioDecoder();
 

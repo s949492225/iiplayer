@@ -1,9 +1,7 @@
 //
 // Created by 宋林涛 on 2018/10/22.
 //
-
-#ifndef IIPLAYER_UTIL_H
-#define IIPLAYER_UTIL_H
+#pragma once
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_FIND_STREAM -2
@@ -34,7 +32,7 @@ extern "C" {
 
 int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext);
 
-template <typename T>
+template<typename T>
 char *to_char_str(T from) {
     std::stringstream ss;
     std::string str;
@@ -43,6 +41,14 @@ char *to_char_str(T from) {
     return const_cast<char *>(str.c_str());
 }
 
-#endif //IIPLAYER_UTIL_H
 
-void thread_wait(pthread_cond_t* __cond, pthread_mutex_t* __mutex,long ms);
+void thread_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex, long ms);
+
+template<typename T>
+inline void ii_deletep(T **arg);
+
+template<typename T>
+void ii_deletep(T **arg) {
+    delete (*arg);
+    *arg = NULL;
+}

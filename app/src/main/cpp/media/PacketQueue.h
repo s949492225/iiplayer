@@ -22,9 +22,10 @@ private:
     std::queue<AVPacket *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
+    pthread_cond_t mCondContinue;
     Status *mStatus = NULL;
 public:
-    PacketQueue(Status *status, char *name);
+    PacketQueue(Status *status,pthread_cond_t condContinue, char *name);
 
     ~PacketQueue();
 

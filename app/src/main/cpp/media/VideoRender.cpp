@@ -3,6 +3,7 @@
 //
 #include "VideoRender.h"
 #import "MediaPlayer.h"
+#include <cstdlib>
 
 VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase) {
     mPlayer = player;
@@ -55,7 +56,7 @@ void VideoRender::playThread() {
                 double diff = getFrameDiffTime(frame);
                 if (diff < -0.01) {
                     int sleep = -(int) (diff * 1000);
-                    if (fabs(sleep) > 50) {
+                    if (std::abs(sleep) > 50) {
                         sleep = 50;
                     }
                     av_usleep(static_cast<unsigned int>(sleep * 1000));
@@ -117,7 +118,7 @@ void VideoRender::playThread() {
 
                 if (diff < -0.01) {
                     int sleep = -(int) (diff * 1000);
-                    if (fabs(sleep) > 50) {
+                    if (std::abs(sleep) > 50) {
                         sleep = 50;
                     }
                     av_usleep(static_cast<unsigned int>(sleep * 1000));
@@ -161,7 +162,9 @@ double VideoRender::getFrameDiffTime(AVFrame *frame) {
 }
 
 void VideoRender::putFrame(AVFrame *frame) {
-    mQueue->putFrame(frame);
+    if (mQueue) {
+        mQueue->putFrame(frame);
+    }
 
 }
 

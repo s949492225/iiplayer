@@ -6,66 +6,34 @@
 #define IIPLAYER_MEDIA_PALYER_H
 
 #include "../android/android_log.h"
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 #include "util.h"
 #include "Status.h"
 #include "AudioRender.h"
 #include  "VideoRender.h"
 #include  "../android/iiplayer_jni.h"
-#include <unistd.h>
-#include "time.h"
 #include "../android/CallJava.h"
 #include "AudioDecoder.h"
 #include "VideoDecoder.h"
-
-extern "C" {
-#include "libavutil/time.h"
-#include "libavcodec/avcodec.h"
-#include "libavdevice/avdevice.h"
-#include "libavformat/avformat.h"
-#include <libavutil/time.h>
-#include <libswresample/swresample.h>
-}
+#include "PacketReader.h"
 
 class MediaPlayer {
 private:
-    std::thread *mReadThread = NULL;
-    pthread_mutex_t mMutexRead;
-    AVFormatContext *mFormatCtx = NULL;
     const char *mUrl = NULL;
-    //info
+    PacketReader *mReader = NULL;
+    void notifyWait();
+public:
+    Status *mStatus = NULL;
+    double mClock = 0;
     int mDuration = 0;
     int mRotation = 0;
     int mWidth = 0;
     int mHeight = 0;
-    //audio
-    int mAudioStreamIndex = -1;
-    AVCodecContext *mAudioCodecCtx = NULL;
-    AudioDecoder *mAudioDecoder = NULL;
+    CallJava *mCallJava=NULL;
+
     AudioRender *mAudioRender = NULL;
-    //video
-    int mVideoStreamIndex = -1;
-    AVCodecContext *mVideoCodecCtx = NULL;
-    VideoDecoder *mVideoDecoder;
     VideoRender *mVideoRender = NULL;
-
-    CallJava *mCallJava;
-
-    int prepare();
-
-    void setMediaInfo();
-
-    void readThread();
-
-    void seekErrorPos(int sec);
-
-    int friend ioInterruptCallback(void *ctx);
-
-public:
-    Status *mStatus = NULL;
-    double mClock = 0;
+    AudioDecoder *mAudioDecoder = NULL;
+    VideoDecoder *mVideoDecoder = NULL;
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject pJobject);
 
@@ -83,8 +51,6 @@ public:
 
     void release();
 
-    void handlerSeek();
-
     void sendMsg(bool isMain, int type);
 
     void sendMsg(bool isMain, int type, int data);
@@ -93,10 +59,11 @@ public:
 
     jstring getInfo(char *string);
 
-    void checkBuffer(AVPacket *pPacket);
+    AudioRender *getAudioRender();
 
-    AudioRender * getAudioRender();
-    VideoRender * getVideoRender();
+    VideoRender *getVideoRender();
+
+    const char *getUrl();
 };
 
 

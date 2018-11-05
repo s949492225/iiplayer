@@ -13,6 +13,7 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/Status.cpp
         src/main/cpp/media/util.cpp
         src/main/cpp/media/FrameQueue.cpp
+        src/main/cpp/media/PacketReader.cpp
         src/main/cpp/media/AudioDecoder.cpp
         src/main/cpp/media/VideoDecoder.cpp
         src/main/cpp/media/AudioRender.cpp
