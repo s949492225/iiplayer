@@ -14,6 +14,7 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/util.cpp
         src/main/cpp/media/FrameQueue.cpp
         src/main/cpp/media/AudioDecoder.cpp
+        src/main/cpp/media/VideoDecoder.cpp
         src/main/cpp/media/AudioRender.cpp
         src/main/cpp/media/VideoRender.cpp
         src/main/cpp/android/util.cpp

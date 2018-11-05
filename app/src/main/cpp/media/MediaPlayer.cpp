@@ -28,6 +28,7 @@ void MediaPlayer::open(const char *url) {
     this->mStatus = new Status();
     mReadThread = new std::thread(std::bind(&MediaPlayer::readThread, this));
     mAudioDecoder = new AudioDecoder(this);
+    mVideoDecoder = new VideoDecoder(this);
 }
 
 
@@ -94,7 +95,7 @@ int MediaPlayer::prepare() {
 
     sendMsg(false, ACTION_PLAY_PREPARED);
     mAudioDecoder->start(mAudioCodecCtx);
-    mVideoDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeVideo, this));
+    mVideoDecoder->start(mVideoCodecCtx);
     return 0;
 }
 
@@ -169,70 +170,6 @@ void MediaPlayer::checkBuffer(AVPacket *packet) {
     double cachedTime = packet->pts * av_q2d(mAudioRender->mTimebase);
     mCallJava->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
-
-//long getCurrentTime() {
-//    struct timeval tv;
-//    gettimeofday(&tv, NULL);
-//    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-//}
-
-void MediaPlayer::decodeVideo() {
-    if (LOG_DEBUG) {
-        LOGD("视频解码线程开始,tid:%i\n", gettid())
-    }
-    AVPacket *packet = NULL;
-    AVFrame *frame = NULL;
-    int ret = 0;
-
-    while (mStatus != NULL && !mStatus->isExit) {
-        if (mStatus->isSeek) {
-            av_usleep(1000 * 100);
-            continue;
-        }
-
-        if (mStatus->isPause) {
-            av_usleep(1000 * 100);
-            continue;
-        }
-
-        packet = av_packet_alloc();
-        if (mStatus->mVideoQueue->getPacket(packet) != 0) {
-            av_packet_free(&packet);
-            continue;
-        }
-//        long time0 = getCurrentTime();
-        ret = avcodec_send_packet(mVideoCodecCtx, packet);
-        if (ret != 0) {
-            av_packet_free(&packet);
-            continue;
-        }
-
-        frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mVideoCodecCtx, frame);
-//        long time1 = getCurrentTime();
-//        LOGD("解码的时长:%ld", time1 - time0);
-        if (ret == 0) {
-
-            while (mStatus != NULL && !mStatus->isExit && mVideoRender->isQueueFull()) {
-                av_usleep(1000 * 5);
-            }
-            if (mStatus == NULL || mStatus->isExit) {
-                av_frame_free(&frame);
-                continue;
-            }
-            if (!mStatus->isSeek) {
-                mVideoRender->putFrame(frame);
-            } else {
-                av_frame_free(&frame);
-            }
-            av_packet_free(&packet);
-        } else {
-            av_frame_free(&frame);
-            av_packet_free(&packet);
-        }
-    }
-}
-
 
 void MediaPlayer::play() {
     if (mStatus && mAudioRender) {
@@ -340,16 +277,17 @@ void MediaPlayer::release() {
         mReadThread = NULL;
     }
 
-    if (mAudioDecoder!=NULL){
+    if (mAudioDecoder != NULL) {
         delete mAudioDecoder;
-        mAudioDecoder=NULL;
+        mAudioDecoder = NULL;
     }
 
-    if (mVideoDecodeThread) {
-        mVideoDecodeThread->join();
-        delete mVideoDecodeThread;
-        mVideoDecodeThread = NULL;
+
+    if (mVideoDecoder != NULL) {
+        delete mVideoDecoder;
+        mVideoDecoder = NULL;
     }
+
 
     if (mAudioRender != NULL) {
         delete mAudioRender;
@@ -459,5 +397,10 @@ void MediaPlayer::setMediaInfo() {
 AudioRender *MediaPlayer::getAudioRender() {
     return mAudioRender;
 }
+
+VideoRender *MediaPlayer::getVideoRender() {
+    return mVideoRender;
+}
+
 
 

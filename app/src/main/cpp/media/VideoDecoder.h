@@ -2,9 +2,8 @@
 // Created by 宋林涛 on 2018/11/5.
 //
 
-#ifndef IIPLAYER_AUDIODECODER_H
-#define IIPLAYER_AUDIODECODER_H
-
+#ifndef IIPLAYER_VIDEODECODER_H
+#define IIPLAYER_VIDEODECODER_H
 
 #include <thread>
 #include "Status.h"
@@ -20,7 +19,7 @@ extern "C" {
 
 class MediaPlayer;
 
-class AudioDecoder {
+class VideoDecoder {
 private:
     MediaPlayer *mPlayer = NULL;
     Status *mStatus = NULL;
@@ -30,12 +29,12 @@ private:
     void decode();
 
 public:
-    AudioDecoder(MediaPlayer *player);
+    VideoDecoder(MediaPlayer *player);
 
-    ~AudioDecoder();
+    ~VideoDecoder();
 
     void start(AVCodecContext *pContext);
 };
 
 
-#endif //IIPLAYER_AUDIODECODER_H
+#endif //IIPLAYER_VIDEODECODER_H
