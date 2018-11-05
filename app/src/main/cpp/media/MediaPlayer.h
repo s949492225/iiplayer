@@ -6,21 +6,23 @@
 #define IIPLAYER_MEDIA_PALYER_H
 
 #include "../android/android_log.h"
-#include "util.h"
-#include "Status.h"
-#include "AudioRender.h"
-#include  "VideoRender.h"
+#include "other/util.h"
+#include "global/Status.h"
+#include "render/AudioRender.h"
+#include  "render/VideoRender.h"
 #include  "../android/iiplayer_jni.h"
 #include "../android/CallJava.h"
-#include "AudioDecoder.h"
-#include "VideoDecoder.h"
-#include "PacketReader.h"
+#include "decode/AudioDecoder.h"
+#include "decode/VideoDecoder.h"
+#include "reader/PacketReader.h"
+#include "global/LifeSequenceHolder.h"
 
 class MediaPlayer {
 private:
     const char *mUrl = NULL;
     PacketReader *mReader = NULL;
     void notifyWait();
+
 public:
     Status *mStatus = NULL;
     double mClock = 0;
@@ -28,12 +30,12 @@ public:
     int mRotation = 0;
     int mWidth = 0;
     int mHeight = 0;
-    CallJava *mCallJava=NULL;
-
-    AudioRender *mAudioRender = NULL;
-    VideoRender *mVideoRender = NULL;
+    CallJava *mCallJava = NULL;
+    LifeSequenceHolder *mHolder;
     AudioDecoder *mAudioDecoder = NULL;
     VideoDecoder *mVideoDecoder = NULL;
+    AudioRender *mAudioRender = NULL;
+    VideoRender *mVideoRender = NULL;
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject pJobject);
 

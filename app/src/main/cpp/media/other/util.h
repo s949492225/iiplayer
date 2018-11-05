@@ -28,7 +28,7 @@ extern "C" {
 }
 
 #include <sstream>
-#include "../android/android_log.h"
+#include "../../android/android_log.h"
 
 int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext);
 

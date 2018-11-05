@@ -3,24 +3,20 @@
 //
 
 #include "AudioDecoder.h"
-#include "MediaPlayer.h"
+#include "../MediaPlayer.h"
 
-AudioDecoder::AudioDecoder(MediaPlayer *player, PacketQueue *queue) {
+AudioDecoder::AudioDecoder(MediaPlayer *player) {
     mPlayer = player;
-    mStatus = player->mStatus;
-    mQueue = queue;
+    mQueue = new PacketQueue(mPlayer->mStatus,mPlayer->mHolder, const_cast<char *>("audio"));
 }
 
 AudioDecoder::~AudioDecoder() {
     mDecodeThread->join();
     mDecodeThread = NULL;
     mPlayer = NULL;
-    mStatus = NULL;
-    mCoderCtx = NULL;
 }
 
-void AudioDecoder::start(AVCodecContext *pContext) {
-    mCoderCtx = pContext;
+void AudioDecoder::start() {
     mDecodeThread = new std::thread(std::bind(&AudioDecoder::decode, this));
 }
 
@@ -32,14 +28,14 @@ void AudioDecoder::decode() {
     AVFrame *frame = NULL;
     int ret = 0;
 
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
 
-        if (mStatus->isSeek) {
+        if (mPlayer->mStatus->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
 
-        if (mStatus->isPause) {
+        if (mPlayer->mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -49,14 +45,15 @@ void AudioDecoder::decode() {
             av_packet_free(&packet);
             continue;
         }
-        ret = avcodec_send_packet(mCoderCtx, packet);
+        
+        ret = avcodec_send_packet(mPlayer->mHolder->mAudioCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
             continue;
         }
 
         frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mCoderCtx, frame);
+        ret = avcodec_receive_frame(mPlayer->mHolder->mAudioCodecCtx, frame);
         if (ret == 0) {
 
             if (frame->channels && frame->channel_layout == 0) {
@@ -66,15 +63,15 @@ void AudioDecoder::decode() {
                 frame->channels = av_get_channel_layout_nb_channels(
                         frame->channel_layout);
             }
-            while (mStatus != NULL && !mStatus->isExit &&
+            while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit &&
                    mPlayer->getAudioRender()->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mStatus == NULL || mStatus->isExit) {
+            if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getAudioRender()&&!mStatus->isSeek) {
+            if (mPlayer->getAudioRender()&&!mPlayer->mStatus->isSeek) {
                 mPlayer->getAudioRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);

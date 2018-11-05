@@ -2,50 +2,47 @@
 // Created by 宋林涛 on 2018/9/28.
 //
 
-#include "PacketQueue.h"
-#include "Status.h"
+#include "FrameQueue.h"
+#include "../global/Status.h"
 
-PacketQueue::PacketQueue(Status *status,pthread_cond_t condContinue, char *name) {
+
+FrameQueue::FrameQueue(Status *status, char *name) {
     mStatus = status;
     mName = name;
-    mCondContinue=condContinue;
     pthread_mutex_init(&mMutex, NULL);
     pthread_cond_init(&mCond, NULL);
 }
 
-PacketQueue::~PacketQueue() {
+FrameQueue::~FrameQueue() {
     clearAll();
     pthread_mutex_destroy(&mMutex);
     pthread_cond_destroy(&mCond);
 }
 
-int PacketQueue::putPacket(AVPacket *packet) {
+int FrameQueue::putFrame(AVFrame *packet) {
     pthread_mutex_lock(&mMutex);
-
     mQueue.push(packet);
     pthread_cond_signal(&mCond);
-
     pthread_mutex_unlock(&mMutex);
     return 0;
 }
 
-int PacketQueue::getPacket(AVPacket *packet) {
+int FrameQueue::getFrame(AVFrame *frame) {
     pthread_mutex_lock(&mMutex);
     int ret = -1;
     while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
-            AVPacket *avPacket = mQueue.front();
-            if (av_packet_ref(packet, avPacket) == 0) {
+            AVFrame *avFrame = mQueue.front();
+            if (av_frame_ref(frame, avFrame) == 0) {
                 mQueue.pop();
                 ret = 0;
-                av_packet_free(&avPacket);
-                av_free(avPacket);
-                avPacket = NULL;
+                av_frame_free(&avFrame);
+                av_free(avFrame);
+                avFrame = NULL;
                 pthread_cond_signal(&mCond);
             }
             break;
         } else {
-            pthread_cond_signal(&mCondContinue);
             pthread_cond_wait(&mCond, &mMutex);
         }
     }
@@ -53,7 +50,7 @@ int PacketQueue::getPacket(AVPacket *packet) {
     return ret;
 }
 
-int PacketQueue::getQueueSize() {
+int FrameQueue::getQueueSize() {
     int size = 0;
     pthread_mutex_lock(&mMutex);
     size = mQueue.size();
@@ -61,21 +58,21 @@ int PacketQueue::getQueueSize() {
     return size;
 }
 
-void PacketQueue::clearAll() {
+void FrameQueue::clearAll() {
     pthread_cond_signal(&mCond);
     pthread_mutex_lock(&mMutex);
 
     while (!mQueue.empty()) {
-        AVPacket *packet = mQueue.front();
+        AVFrame *packet = mQueue.front();
         mQueue.pop();
-        av_packet_free(&packet);
+        av_frame_free(&packet);
         av_free(packet);
         packet = NULL;
     }
     pthread_mutex_unlock(&mMutex);
 }
 
-void PacketQueue::notifyAll() {
+void FrameQueue::notifyAll() {
     pthread_cond_signal(&mCond);
 }
 

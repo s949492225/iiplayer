@@ -6,7 +6,7 @@
 
 #include "queue"
 #include "pthread.h"
-#include "../android/android_log.h"
+#include "../../android/android_log.h"
 
 extern "C"
 {

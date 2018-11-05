@@ -3,54 +3,27 @@
 //
 
 #include "PacketReader.h"
-#include "MediaPlayer.h"
-#include "AudioDecoder.h"
-#include "AudioRender.h"
-#include "VideoDecoder.h"
-#include "VideoRender.h"
+#include "../MediaPlayer.h"
+#include "../decode/AudioDecoder.h"
+#include "../render/AudioRender.h"
+#include "../decode/VideoDecoder.h"
+#include "../render/VideoRender.h"
 #include <unistd.h>
 
 #define MAX_QUEUE_SIZE (1024*1024)
 
 PacketReader::PacketReader(MediaPlayer *player) {
     mPlayer = player;
-    mStatus = player->mStatus;
     pthread_mutex_init(&mMutexRead, NULL);
-    pthread_cond_init(&mCondContinue, NULL);
-    mAudioQueue = new PacketQueue(mStatus,mCondContinue, const_cast<char *>("audio"));
-    mVideoQueue = new PacketQueue(mStatus,mCondContinue, const_cast<char *>("video"));
+    pthread_cond_init(&mPlayer->mHolder->mCondRead, NULL);
     mReadThread = new std::thread(std::bind(&PacketReader::read, this));
 
 }
 
 PacketReader::~PacketReader() {
-    pthread_cond_signal(&mCondContinue);
     mReadThread->join();
     mReadThread = NULL;
     pthread_mutex_destroy(&mMutexRead);
-    pthread_cond_destroy(&mCondContinue);
-
-    if (mFormatCtx != NULL) {
-        avformat_close_input(&mFormatCtx);
-        avformat_free_context(mFormatCtx);
-        mFormatCtx = NULL;
-    }
-
-
-    if (mAudioCodecCtx != NULL) {
-        avcodec_close(mAudioCodecCtx);
-        avcodec_free_context(&mAudioCodecCtx);
-        mAudioCodecCtx = NULL;
-    }
-
-    if (mVideoCodecCtx != NULL) {
-        avcodec_close(mVideoCodecCtx);
-        avcodec_free_context(&mVideoCodecCtx);
-        mVideoCodecCtx = NULL;
-    }
-
-
-    avformat_network_deinit();
 }
 
 
@@ -68,11 +41,11 @@ int PacketReader::prepare() {
     av_register_all();
     avformat_network_init();
 
-    mFormatCtx = avformat_alloc_context();
-    mFormatCtx->interrupt_callback.callback = ioInterruptCallback;
-    mFormatCtx->interrupt_callback.opaque = mPlayer;
+    mPlayer->mHolder->mFormatCtx = avformat_alloc_context();
+    mPlayer->mHolder->mFormatCtx->interrupt_callback.callback = ioInterruptCallback;
+    mPlayer->mHolder->mFormatCtx->interrupt_callback.opaque = mPlayer;
     const char *url = mPlayer->getUrl();
-    int error = avformat_open_input(&mFormatCtx, url, NULL, NULL);
+    int error = avformat_open_input(&mPlayer->mHolder->mFormatCtx, url, NULL, NULL);
     if (error != 0) {
         if (LOG_DEBUG) {
             LOGE("can not open url %s", url);
@@ -81,7 +54,7 @@ int PacketReader::prepare() {
         return -1;
     }
 
-    if (avformat_find_stream_info(mFormatCtx, NULL) < 0) {
+    if (avformat_find_stream_info(mPlayer->mHolder->mFormatCtx, NULL) < 0) {
         if (LOG_DEBUG) {
             LOGE("can not find steams from %s", url);
         }
@@ -89,34 +62,34 @@ int PacketReader::prepare() {
         return -1;
     }
     //流信息获取
-    for (int i = 0; i < mFormatCtx->nb_streams; i++) {
-        AVCodecParameters *parameters = mFormatCtx->streams[i]->codecpar;
+    for (int i = 0; i < mPlayer->mHolder->mFormatCtx->nb_streams; i++) {
+        AVCodecParameters *parameters = mPlayer->mHolder->mFormatCtx->streams[i]->codecpar;
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             //音频解码器
             if (i != -1) {
-                int ret = get_codec_context(parameters, &mAudioCodecCtx);
+                int ret = get_codec_context(parameters, &mPlayer->mHolder->mAudioCodecCtx);
                 if (ret < 0) {
                     mPlayer->sendMsg(false, ERROR_AUDIO_DECODEC_EXCEPTION);
                     return -1;
                 }
-                int64_t sumTime = mFormatCtx->duration;
-                mPlayer->mAudioRender = new AudioRender(mPlayer, sumTime, mAudioCodecCtx,
-                                                        mFormatCtx->streams[i]->time_base);
-                mAudioStreamIndex = i;
+                int64_t sumTime = mPlayer->mHolder->mFormatCtx->duration;
+                mPlayer->mAudioRender = new AudioRender(mPlayer, sumTime,
+                                                        mPlayer->mHolder->mFormatCtx->streams[i]->time_base);
+                mPlayer->mHolder->mAudioStreamIndex = i;
                 mPlayer->mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
                 mPlayer->sendMsg(false, DATA_DURATION, mPlayer->mDuration);
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
-                int ret = get_codec_context(parameters, &mVideoCodecCtx);
+                int ret = get_codec_context(parameters, &mPlayer->mHolder->mVideoCodecCtx);
                 if (ret < 0) {
                     mPlayer->sendMsg(false, ERROR_VIDEO_DECODEC_EXCEPTION, mPlayer->mDuration);
                     return -1;
                 }
                 mPlayer->mCallJava->setCodecType(0);
-                mPlayer->mVideoRender = new VideoRender(mPlayer, mVideoCodecCtx,
-                                                        mFormatCtx->streams[i]->time_base);
-                mVideoStreamIndex = i;
+                mPlayer->mVideoRender = new VideoRender(mPlayer,
+                                                        mPlayer->mHolder->mFormatCtx->streams[i]->time_base);
+                mPlayer->mHolder->mVideoStreamIndex = i;
             }
         }
     }
@@ -124,8 +97,8 @@ int PacketReader::prepare() {
     setMediaInfo();
 
     mPlayer->sendMsg(false, ACTION_PLAY_PREPARED);
-    mPlayer->mAudioDecoder->start(mAudioCodecCtx);
-    mPlayer->mVideoDecoder->start(mVideoCodecCtx);
+    mPlayer->mAudioDecoder->start();
+    mPlayer->mVideoDecoder->start();
     return 0;
 }
 
@@ -139,58 +112,59 @@ void PacketReader::read() {
         return;
     }
     //read packet
-    while (mStatus != NULL && !mStatus->isExit && !mStatus->isPlayEnd) {
+    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit && !mPlayer->mStatus->isPlayEnd) {
 
-        if (mStatus->isEOF && !mStatus->isSeek) {
+        if (mPlayer->mStatus->isEOF && !mPlayer->mStatus->isSeek) {
             pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mCondContinue, &mMutexRead, 10);
+            thread_wait(&mPlayer->mHolder->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
             continue;
         }
 
-        if (mStatus->isSeek) {
+        if (mPlayer->mStatus->isSeek) {
             handlerSeek();
         }
 
-        if (mStatus->isPause) {
+        if (mPlayer->mStatus->isPause) {
             av_usleep(1000 * 10);
             continue;
         }
         bool isSizeOver =
-                mVideoQueue->getQueueSize() +mAudioQueue->getQueueSize() >
+                mPlayer->mVideoDecoder->mQueue->getQueueSize() +
+                mPlayer->mAudioDecoder->mQueue->getQueueSize() >
                 MAX_QUEUE_SIZE;
-        bool isAudioNeed =mAudioQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
-        bool isVideoNeed = mVideoQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isAudioNeed = mPlayer->mAudioDecoder->mQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isVideoNeed = mPlayer->mVideoDecoder->mQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
         if (isSizeOver && isAudioNeed && isVideoNeed) {
             pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mCondContinue, &mMutexRead, 10);
+            thread_wait(&mPlayer->mHolder->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
             continue;
         }
 
         AVPacket *packet = av_packet_alloc();
         int ret;
-        if ((ret = av_read_frame(mFormatCtx, packet)) == 0) {
-            if (packet->stream_index == mVideoStreamIndex) {
-                mVideoQueue->putPacket(packet);
-            } else if (packet->stream_index == mAudioStreamIndex) {
-               mAudioQueue->putPacket(packet);
+        if ((ret = av_read_frame(mPlayer->mHolder->mFormatCtx, packet)) == 0) {
+            if (packet->stream_index == mPlayer->mHolder->mVideoStreamIndex) {
+                mPlayer->mVideoDecoder->mQueue->putPacket(packet);
+            } else if (packet->stream_index == mPlayer->mHolder->mAudioStreamIndex) {
+                mPlayer->mAudioDecoder->mQueue->putPacket(packet);
                 checkBuffer(packet);
             } else {
                 av_packet_free(&packet);
             }
         } else {
             av_packet_free(&packet);
-            if ((ret == AVERROR_EOF || avio_feof(mFormatCtx->pb) == 0)) {
-                mStatus->isEOF = true;
+            if ((ret == AVERROR_EOF || avio_feof(mPlayer->mHolder->mFormatCtx->pb) == 0)) {
+                mPlayer->mStatus->isEOF = true;
                 continue;
             }
-            if (mFormatCtx->pb && mFormatCtx->pb->error) {
+            if (mPlayer->mHolder->mFormatCtx->pb && mPlayer->mHolder->mFormatCtx->pb->error) {
                 mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
                 seekErrorPos(static_cast<int>(mPlayer->mClock));
             }
             pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mCondContinue, &mMutexRead, 10);
+            thread_wait(&mPlayer->mHolder->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
         }
     }
@@ -199,21 +173,22 @@ void PacketReader::read() {
 
 void PacketReader::handlerSeek() {
     //seek io
-    int64_t rel = mStatus->mSeekSec * AV_TIME_BASE;
-    int ret = avformat_seek_file(mFormatCtx, -1, INT64_MIN, rel, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+    int64_t rel = mPlayer->mStatus->mSeekSec * AV_TIME_BASE;
+    int ret = avformat_seek_file(mPlayer->mHolder->mFormatCtx, -1, INT64_MIN, rel, INT64_MAX,
+                                 AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
         //clear
-       mAudioQueue->clearAll();
-        mVideoQueue->clearAll();
+        mPlayer->mAudioDecoder->mQueue->clearAll();
+        mPlayer->mVideoDecoder->mQueue->clearAll();
 
         mPlayer->mAudioRender->clearQueue();
         mPlayer->mVideoRender->clearQueue();
-        mPlayer->mClock = mStatus->mSeekSec;
+        mPlayer->mClock = mPlayer->mStatus->mSeekSec;
     } else {
         LOGE("seek fail")
     }
-    mStatus->isEOF = false;
-    mStatus->isSeek = false;
+    mPlayer->mStatus->isEOF = false;
+    mPlayer->mStatus->isSeek = false;
     mPlayer->sendMsg(false, ACTION_PLAY_SEEK_OVER);
 }
 
@@ -233,14 +208,16 @@ void PacketReader::seekErrorPos(int sec) {
         rel = mPlayer->mDuration;
     else
         rel = sec;
-    mStatus->mSeekSec = rel;
-    mStatus->isSeek = true;
-    pthread_cond_signal(&mCondContinue);
+    mPlayer->mStatus->mSeekSec = rel;
+    mPlayer->mStatus->isSeek = true;
+    pthread_cond_signal(&mPlayer->mHolder->mCondRead);
 }
 
 void PacketReader::setMediaInfo() {
     AVDictionaryEntry *tag = NULL;
-    tag = av_dict_get(mFormatCtx->streams[mVideoStreamIndex]->metadata, "rotate", tag, 0);
+    tag = av_dict_get(
+            mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mVideoStreamIndex]->metadata,
+            "rotate", tag, 0);
     if (tag == NULL) {
         mPlayer->mRotation = 0;
     } else {
@@ -249,8 +226,8 @@ void PacketReader::setMediaInfo() {
         mPlayer->mRotation = angle;
     }
 
-    mPlayer->mWidth = mVideoCodecCtx->width;
-    mPlayer->mHeight = mVideoCodecCtx->height;
+    mPlayer->mWidth = mPlayer->mHolder->mVideoCodecCtx->width;
+    mPlayer->mHeight = mPlayer->mHolder->mVideoCodecCtx->height;
 }
 
 void PacketReader::seek(int sec) {
@@ -261,14 +238,14 @@ void PacketReader::seek(int sec) {
         rel = mPlayer->mDuration;
     else
         rel = sec;
-    mStatus->mSeekSec = rel;
-    mStatus->isSeek = true;
+    mPlayer->mStatus->mSeekSec = rel;
+    mPlayer->mStatus->isSeek = true;
     mPlayer->sendMsg(true, ACTION_PLAY_SEEK);
-    pthread_cond_signal(&mCondContinue);
+    pthread_cond_signal(&mPlayer->mHolder->mCondRead);
 }
 
 void PacketReader::notifyWait() {
-    pthread_cond_signal(&mCondContinue);
-    mAudioQueue->notifyAll();
-    mVideoQueue->notifyAll();
+    pthread_cond_signal(&mPlayer->mHolder->mCondRead);
+    mPlayer->mAudioDecoder->mQueue->notifyAll();
+    mPlayer->mVideoDecoder->mQueue->notifyAll();
 }

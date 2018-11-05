@@ -5,7 +5,7 @@
 #ifndef IIPLAYER_STATUS_H
 #define IIPLAYER_STATUS_H
 
-#include "PacketQueue.h"
+#include "../queue/PacketQueue.h"
 
 class Status {
 public:

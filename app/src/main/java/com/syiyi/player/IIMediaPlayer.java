@@ -173,8 +173,10 @@ public class IIMediaPlayer {
                         break;
                     case Code.ACTION_PLAY_PREPARED:
                         onPrepared();
+                        break;
                     case Code.DATA_DURATION:
                         onGetDuration(msg.arg1);
+                        break;
                     case Code.DATA_NOW_PLAYING_TIME:
                         onPlayTimeUpdate(msg.arg1);
                         break;
@@ -186,10 +188,13 @@ public class IIMediaPlayer {
                         break;
                     case Code.ACTION_PLAY_PAUSE:
                         onPlaying(false);
+                        break;
                     case Code.ACTION_PLAY_LOADING:
                         onLoading(true);
+                        break;
                     case Code.ACTION_PLAY_LOADING_OVER:
                         onLoading(false);
+                        break;
                     case Code.ACTION_PLAY_STOP:
                         onPlaying(false);
                         break;
@@ -205,12 +210,12 @@ public class IIMediaPlayer {
     }
 
     private void onBufferTimeUpdate(int arg1) {
-        mBufferTimeListener.onBufferTime(new TimeInfo(arg1, getDuration()));
+        mBufferTimeListener.onBufferTime(new TimeInfo(arg1, mDuration));
 
     }
 
     private void onPlayTimeUpdate(int arg1) {
-        mPlayTimeListener.onPlayTime(new TimeInfo(arg1, getDuration()));
+        mPlayTimeListener.onPlayTime(new TimeInfo(arg1, mDuration));
 
     }
 
@@ -236,11 +241,7 @@ public class IIMediaPlayer {
     }
 
     public int getRotation() {
-        String msg = nativeGetInfo("rotation");
-        if (msg == null)
-            return mDuration;
-        else
-            return Integer.parseInt(msg);
+        return Integer.parseInt(nativeGetInfo("rotation"));
     }
 
     public int getPlayedTime() {

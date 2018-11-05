@@ -2,19 +2,18 @@
 //
 
 #include "AudioRender.h"
-#include "MediaPlayer.h"
+#include "../MediaPlayer.h"
 
-AudioRender::AudioRender(MediaPlayer *player, int64_t duration, AVCodecContext *codecContext,
+AudioRender::AudioRender(MediaPlayer *player, int64_t duration,
                          AVRational timebase) {
-    mStatus = player->mStatus;
     mPlayer = player;
     this->duration = duration;
-    mSampleRate = codecContext->sample_rate;
+    mSampleRate = mPlayer->mHolder->mAudioCodecCtx->sample_rate;
     mTimebase = timebase;
-    mQueue = new FrameQueue(mStatus, const_cast<char *>("audio"));
+    mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
-    initSwrCtx(codecContext);
+    initSwrCtx(mPlayer->mHolder->mAudioCodecCtx);
 }
 
 void AudioRender::initSwrCtx(AVCodecContext *context) {
@@ -41,9 +40,9 @@ void AudioRender::play() {
 
 int AudioRender::getPcmData() {
     mOutSize = 0;
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
 
-        if (mStatus->isSeek) {
+        if (mPlayer->mStatus->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -51,15 +50,15 @@ int AudioRender::getPcmData() {
         if (mQueue && mQueue->getQueueSize() == 0)//加载中
         {
 
-            if (!mStatus->isLoad) {
-                mStatus->isLoad = true;
+            if (!mPlayer->mStatus->isLoad) {
+                mPlayer->mStatus->isLoad = true;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
             av_usleep(1000 * 100);
             continue;
         } else {
-            if (mStatus->isLoad) {
-                mStatus->isLoad = false;
+            if (mPlayer->mStatus->isLoad) {
+                mPlayer->mStatus->isLoad = false;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
             }
         }
@@ -68,12 +67,12 @@ int AudioRender::getPcmData() {
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
             if (frame->pts == duration) {
-                mStatus->isPlayEnd = true;
+                mPlayer->mStatus->isPlayEnd = true;
             }
 
-            if (mStatus && mStatus->isSeek) {
+            if (mPlayer->mStatus && mPlayer->mStatus->isSeek) {
                 double frame_time = frame->pts * av_q2d(mTimebase);
-                if (fabs(mStatus->mSeekSec - frame_time) > 0.01) {
+                if (fabs(mPlayer->mStatus->mSeekSec - frame_time) > 0.01) {
                     av_frame_free(&frame);
                     av_free(frame);
                     frame = NULL;
@@ -120,7 +119,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
             if (result != SL_RESULT_SUCCESS) {
                 LOGE("音频渲染出错\n");
             }
-            if (render.mStatus->isPlayEnd) {
+            if (render.mPlayer->mStatus->isPlayEnd) {
                 render.mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
             }
         }

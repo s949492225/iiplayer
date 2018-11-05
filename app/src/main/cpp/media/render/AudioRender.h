@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "Status.h"
-#include "FrameQueue.h"
+#include "../global/Status.h"
+#include "../queue/FrameQueue.h"
 #include <unistd.h>
 #include <assert.h>
 #include <thread>
@@ -24,7 +24,6 @@ class MediaPlayer;
 
 class AudioRender {
 private:
-    Status *mStatus = NULL;
     int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
@@ -67,7 +66,7 @@ public:
     MediaPlayer *mPlayer = NULL;
     AVRational mTimebase;
 
-    AudioRender(MediaPlayer *status, int64_t duration, AVCodecContext *codecContext,AVRational timebase);
+    AudioRender(MediaPlayer *status, int64_t duration,AVRational timebase);
 
     ~AudioRender();
 

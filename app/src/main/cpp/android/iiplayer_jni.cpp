@@ -105,7 +105,7 @@ static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
         env->ReleaseStringUTFChars(name, cName);
         return player->getInfo(new_str);
     } else {
-        return NULL;
+        return get_jni_env()->NewStringUTF("0");
     }
 }
 

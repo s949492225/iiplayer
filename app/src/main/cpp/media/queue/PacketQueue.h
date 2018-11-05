@@ -7,7 +7,8 @@
 
 #include "queue"
 #include "pthread.h"
-#include "../android/android_log.h"
+#include "../../android/android_log.h"
+#include "../global/LifeSequenceHolder.h"
 
 extern "C"
 {
@@ -22,10 +23,10 @@ private:
     std::queue<AVPacket *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
-    pthread_cond_t mCondContinue;
+    LifeSequenceHolder *mHolder;
     Status *mStatus = NULL;
 public:
-    PacketQueue(Status *status,pthread_cond_t condContinue, char *name);
+    PacketQueue(Status *status,LifeSequenceHolder *holder, char *name);
 
     ~PacketQueue();
 

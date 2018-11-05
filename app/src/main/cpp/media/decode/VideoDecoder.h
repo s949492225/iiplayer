@@ -2,12 +2,11 @@
 // Created by 宋林涛 on 2018/11/5.
 //
 
-#ifndef IIPLAYER_AUDIODECODER_H
-#define IIPLAYER_AUDIODECODER_H
-
+#ifndef IIPLAYER_VIDEODECODER_H
+#define IIPLAYER_VIDEODECODER_H
 
 #include <thread>
-#include "Status.h"
+#include "../global/Status.h"
 
 extern "C" {
 #include "libavutil/time.h"
@@ -20,23 +19,21 @@ extern "C" {
 
 class MediaPlayer;
 
-class AudioDecoder {
+class VideoDecoder {
 private:
     MediaPlayer *mPlayer = NULL;
-    Status *mStatus = NULL;
     std::thread *mDecodeThread = NULL;
-    AVCodecContext *mCoderCtx=NULL;
-    PacketQueue *mQueue = NULL;
-
     void decode();
 
 public:
-    AudioDecoder(MediaPlayer *player,PacketQueue *queue);
+    VideoDecoder(MediaPlayer *player);
 
-    ~AudioDecoder();
+    ~VideoDecoder();
 
-    void start(AVCodecContext *pContext);
+    void start();
+
+    PacketQueue *mQueue = NULL;
 };
 
 
-#endif //IIPLAYER_AUDIODECODER_H
+#endif //IIPLAYER_VIDEODECODER_H

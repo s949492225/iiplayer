@@ -2,17 +2,16 @@
 // Created by 宋林涛 on 2018/10/30.
 //
 #include "VideoRender.h"
-#import "MediaPlayer.h"
+#import "../MediaPlayer.h"
 #include <cstdlib>
 
-VideoRender::VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase) {
+VideoRender::VideoRender(MediaPlayer *player, AVRational timebase) {
     mPlayer = player;
-    mStatus = player->mStatus;
-    mPixFmt = codecContext->pix_fmt;
+    mPixFmt = mPlayer->mHolder->mVideoCodecCtx->pix_fmt;
+    mWidth = mPlayer->mHolder->mVideoCodecCtx->width;
+    mHeight = mPlayer->mHolder->mVideoCodecCtx->height;
     mTimebase = timebase;
-    mQueue = new FrameQueue(mStatus, const_cast<char *>("video"));
-    mWidth = codecContext->width;
-    mHeight = codecContext->height;
+    mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("video"));
 
 }
 
@@ -22,14 +21,14 @@ void VideoRender::play() {
 
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
 
-        if (mStatus->isSeek) {
+        if (mPlayer->mStatus->isSeek) {
             av_usleep(1000 * 5);
             continue;
         }
 
-        if (mStatus->isPause) {
+        if (mPlayer->mStatus->isPause) {
             av_usleep(1000 * 5);
             continue;
         }
@@ -44,9 +43,9 @@ void VideoRender::playThread() {
         int ret = mQueue->getFrame(frame);
 
         if (ret == 0) {
-            if (mStatus && mStatus->isSeek) {
+            if (mPlayer->mStatus && mPlayer->mStatus->isSeek) {
                 double frame_time = frame->pts * av_q2d(mTimebase);
-                if (fabs(mStatus->mSeekSec - frame_time) > 0.01) {
+                if (fabs(mPlayer->mStatus->mSeekSec - frame_time) > 0.01) {
                     av_frame_free(&frame);
                     continue;
                 }
@@ -60,7 +59,7 @@ void VideoRender::playThread() {
                         sleep = 50;
                     }
                     av_usleep(static_cast<unsigned int>(sleep * 1000));
-                    if (mStatus == NULL || mStatus->isExit) {
+                    if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
                         av_frame_free(&frame);
                         break;
                     }
@@ -122,7 +121,7 @@ void VideoRender::playThread() {
                         sleep = 50;
                     }
                     av_usleep(static_cast<unsigned int>(sleep * 1000));
-                    if (mStatus == NULL || mStatus->isExit) {
+                    if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
                         av_frame_free(&yuvFrame);
                         av_frame_free(&frame);
                         av_free(buffer);

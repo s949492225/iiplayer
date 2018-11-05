@@ -3,24 +3,20 @@
 //
 
 #include "VideoDecoder.h"
-#include "MediaPlayer.h"
+#include "../MediaPlayer.h"
 
-VideoDecoder::VideoDecoder(MediaPlayer *player, PacketQueue *queue) {
+VideoDecoder::VideoDecoder(MediaPlayer *player) {
     mPlayer = player;
-    mStatus = player->mStatus;
-    mQueue = queue;
+    mQueue = new PacketQueue(mPlayer->mStatus, mPlayer->mHolder, const_cast<char *>("video"));
 }
 
 VideoDecoder::~VideoDecoder() {
     mDecodeThread->join();
     mDecodeThread = NULL;
     mPlayer = NULL;
-    mStatus = NULL;
-    mCoderCtx = NULL;
 }
 
-void VideoDecoder::start(AVCodecContext *pContext) {
-    mCoderCtx = pContext;
+void VideoDecoder::start() {
     mDecodeThread = new std::thread(std::bind(&VideoDecoder::decode, this));
 }
 
@@ -38,13 +34,13 @@ void VideoDecoder::decode() {
     AVFrame *frame = NULL;
     int ret = 0;
 
-    while (mStatus != NULL && !mStatus->isExit) {
-        if (mStatus->isSeek) {
+    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
+        if (mPlayer->mStatus->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
 
-        if (mStatus->isPause) {
+        if (mPlayer->mStatus->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -55,27 +51,28 @@ void VideoDecoder::decode() {
             continue;
         }
 //        long time0 = getCurrentTime();
-        ret = avcodec_send_packet(mCoderCtx, packet);
+        
+        ret = avcodec_send_packet(mPlayer->mHolder->mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
             continue;
         }
 
         frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mCoderCtx, frame);
+        ret = avcodec_receive_frame(mPlayer->mHolder->mVideoCodecCtx, frame);
 //        long time1 = getCurrentTime();
 //        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
-            while (mStatus != NULL && !mStatus->isExit &&
+            while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit &&
                    mPlayer->getVideoRender()->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mStatus == NULL || mStatus->isExit) {
+            if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getVideoRender()&&!mStatus->isSeek) {
+            if (mPlayer->getVideoRender()&&!mPlayer->mStatus->isSeek) {
                 mPlayer->getVideoRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);

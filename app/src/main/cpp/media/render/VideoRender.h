@@ -6,12 +6,9 @@
 #define IIPLAYER_VIDEORENDER_H
 
 #include <thread>
-#include "../android/android_log.h"
-#include "FrameQueue.h"
 #include <unistd.h>
-#include "util.h"
-#include "Status.h"
-#include "../android/iiplayer_jni.h"
+#include "../other/util.h"
+#include "../queue/FrameQueue.h"
 
 
 extern "C" {
@@ -27,11 +24,10 @@ class MediaPlayer;
 class VideoRender {
 public:
 
-    VideoRender(MediaPlayer *player, AVCodecContext *codecContext, AVRational timebase);
+    VideoRender(MediaPlayer *player, AVRational timebase);
 
     ~VideoRender();
 
-    Status *mStatus = NULL;
     MediaPlayer *mPlayer = NULL;
     AVPixelFormat mPixFmt;
     int mWidth = 0;

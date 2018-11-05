@@ -7,6 +7,7 @@
 #define MAX_QUEUE_SIZE (1024*1024)
 
 MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
+    mHolder = new LifeSequenceHolder();
     mCallJava = new CallJava(pVM, pEnv, obj);
 }
 
@@ -17,8 +18,8 @@ void MediaPlayer::open(const char *url) {
     this->mUrl = url;
     this->mStatus = new Status();
     mReader = new PacketReader(this);
-    mAudioDecoder = new AudioDecoder(this, mReader->mAudioQueue);
-    mVideoDecoder = new VideoDecoder(this, mReader->mVideoQueue);
+    mAudioDecoder = new AudioDecoder(this);
+    mVideoDecoder = new VideoDecoder(this);
 }
 
 
@@ -55,26 +56,6 @@ void MediaPlayer::stop() {
     sendMsg(true, ACTION_PLAY_STOP);
     release();
 
-}
-
-void MediaPlayer::release() {
-
-    if (mStatus) {
-        mStatus->isLoad = false;
-        mStatus->isExit = true;
-    }
-    notifyWait();
-    ii_deletep(&mAudioRender);
-    ii_deletep(&mVideoRender);
-    ii_deletep(&mAudioDecoder);
-    ii_deletep(&mVideoDecoder);
-    ii_deletep(&mReader);
-    ii_deletep(&mStatus);
-    ii_deletep(&mCallJava);
-
-    if (LOG_DEBUG) {
-        LOGD("player 资源释放完成");
-    }
 }
 
 void MediaPlayer::sendMsg(bool isMain, int type, int data) {
@@ -119,7 +100,7 @@ jstring MediaPlayer::getInfo(char *name) {
     } else if (strcmp(name, "played_time") == 0) {
         return get_jni_env()->NewStringUTF(to_char_str(mClock));
     }
-    return get_jni_env()->NewStringUTF("");;
+    return get_jni_env()->NewStringUTF("0");;
 }
 
 
@@ -146,6 +127,28 @@ void MediaPlayer::notifyWait() {
 
     if (mVideoRender) {
         mVideoRender->notifyWait();
+    }
+}
+
+void MediaPlayer::release() {
+
+    if (mStatus) {
+        mStatus->isLoad = false;
+        mStatus->isExit = true;
+    }
+
+    notifyWait();
+    ii_deletep(&mReader);
+    ii_deletep(&mAudioDecoder);
+    ii_deletep(&mVideoDecoder);
+    ii_deletep(&mAudioRender);
+    ii_deletep(&mVideoRender);
+    ii_deletep(&mStatus);
+    ii_deletep(&mHolder);
+    ii_deletep(&mCallJava);
+
+    if (LOG_DEBUG) {
+        LOGD("player 资源释放完成");
     }
 }
 

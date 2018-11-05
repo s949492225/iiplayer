@@ -9,15 +9,16 @@ add_library( # Sets the name of the library.
         src/main/cpp/android/iiplayer_jni.cpp
         src/main/cpp/android/CallJava.cpp
         src/main/cpp/media/MediaPlayer.cpp
-        src/main/cpp/media/PacketQueue.cpp
-        src/main/cpp/media/Status.cpp
-        src/main/cpp/media/util.cpp
-        src/main/cpp/media/FrameQueue.cpp
-        src/main/cpp/media/PacketReader.cpp
-        src/main/cpp/media/AudioDecoder.cpp
-        src/main/cpp/media/VideoDecoder.cpp
-        src/main/cpp/media/AudioRender.cpp
-        src/main/cpp/media/VideoRender.cpp
+        src/main/cpp/media/queue/PacketQueue.cpp
+        src/main/cpp/media/global/Status.cpp
+        src/main/cpp/media/global/LifeSequenceHolder.cpp
+        src/main/cpp/media/other/util.cpp
+        src/main/cpp/media/queue/FrameQueue.cpp
+        src/main/cpp/media/reader/PacketReader.cpp
+        src/main/cpp/media/decode/AudioDecoder.cpp
+        src/main/cpp/media/decode/VideoDecoder.cpp
+        src/main/cpp/media/render/AudioRender.cpp
+        src/main/cpp/media/render/VideoRender.cpp
         src/main/cpp/android/util.cpp
         )
 
