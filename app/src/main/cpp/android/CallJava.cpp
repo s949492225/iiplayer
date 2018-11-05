@@ -12,6 +12,7 @@ CallJava::CallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     mjcls = env->GetObjectClass(obj);
     mJmidSendMsg = env->GetMethodID(mjcls, "sendMessage", "(Landroid/os/Message;)V");
     mJmidSetFrameData = env->GetMethodID(mjcls, "setFrameData", "(II[B[B[B)V");
+    mJmidSetCodeType = env->GetMethodID(mjcls, "setCodecType", "(I)V");
 }
 
 CallJava::~CallJava() {
@@ -101,4 +102,11 @@ void CallJava::setFrameData(bool isMain, AVFrame *yuvFrame) {
     if (!isMain) {
         mVm->DetachCurrentThread();
     }
+}
+
+void CallJava::setCodecType(int type) {
+    JNIEnv *env = NULL;
+    mVm->AttachCurrentThread(&env, 0);
+    env->CallVoidMethod(mObj, mJmidSetCodeType, type);
+    mVm->DetachCurrentThread();
 }

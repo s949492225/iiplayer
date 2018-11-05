@@ -81,6 +81,7 @@ int MediaPlayer::prepare() {
                     sendMsg(false, ERROR_VIDEO_DECODEC_EXCEPTION, mDuration);
                     return -1;
                 }
+                mCallJava->setCodecType(0);
                 mVideoRender = new VideoRender(this, mVideoCodecCtx,
                                                mFormatCtx->streams[i]->time_base);
                 mVideoStreamIndex = i;
@@ -221,7 +222,7 @@ void MediaPlayer::decodeVideo() {
             }
             if (!mStatus->isSeek) {
                 mVideoRender->putFrame(frame);
-            }else{
+            } else {
                 av_frame_free(&frame);
             }
             av_packet_free(&packet);
@@ -283,7 +284,7 @@ void MediaPlayer::decodeAudio() {
             }
             if (!mStatus->isSeek) {
                 mAudioRender->putFrame(frame);
-            } else{
+            } else {
                 av_frame_free(&frame);
             }
             av_packet_free(&packet);

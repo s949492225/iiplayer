@@ -19,6 +19,7 @@ private:
     jclass mjcls;
     jmethodID mJmidSendMsg;
     jmethodID mJmidSetFrameData;
+    jmethodID mJmidSetCodeType;
 public:
     CallJava(JavaVM *vm, JNIEnv *env, jobject obj);
 
@@ -27,6 +28,8 @@ public:
     void sendMsg(bool isMain, int type, int data);
 
     void setFrameData(bool isMain, AVFrame *yuvFrame);
+
+    void setCodecType(int type);
 };
 
 

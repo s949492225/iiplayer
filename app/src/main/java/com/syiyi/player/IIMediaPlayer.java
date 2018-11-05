@@ -8,7 +8,7 @@ import android.util.Log;
 import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
-import com.syiyi.player.opengl.Render;
+import com.syiyi.player.opengl.IIGlSurfaceView;
 
 
 @SuppressWarnings("WeakerAccess")
@@ -21,7 +21,7 @@ public class IIMediaPlayer {
     private OnPrepareListener mPrepareListener;
     private OnPlayTimeListener mPlayTimeListener;
     private OnBufferTimeListener mBufferTimeListener;
-    private Render mRender;
+    private IIGlSurfaceView mSurfaceView;
 
     @SuppressWarnings("unused")
     protected static class Code {
@@ -63,8 +63,8 @@ public class IIMediaPlayer {
         this.url = url;
     }
 
-    public void setRender(Render mRender) {
-        this.mRender = mRender;
+    public void setSurfaceView(IIGlSurfaceView mRender) {
+        this.mSurfaceView = mRender;
     }
 
     public void prepareAsync(OnPrepareListener listener) {
@@ -88,9 +88,16 @@ public class IIMediaPlayer {
     }
 
     @SuppressWarnings("unused")
-    public void setFrameData(int width, int height, byte[] y, byte[] u, byte[] v) {
-        if (mRender != null) {
-            mRender.setYUVRenderData(width, height, y, u, v);
+    private void setFrameData(int width, int height, byte[] y, byte[] u, byte[] v) {
+        if (mSurfaceView != null) {
+            mSurfaceView.setFrameData(width, height, y, u, v);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private void setCodecType(int type) {
+        if (mSurfaceView != null) {
+            mSurfaceView.setCodecType(type);
         }
     }
 
