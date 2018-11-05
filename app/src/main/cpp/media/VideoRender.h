@@ -55,7 +55,6 @@ public:
 
     double getFrameDiffTime(AVFrame *avFrame);
 
-    void renderFrame(AVFrame *yuvFrame) const;
 };
 
 

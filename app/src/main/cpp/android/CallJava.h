@@ -27,7 +27,7 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
-    void setFrameData(bool isMain, AVFrame *yuvFrame);
+    void setFrameData(bool isMain,int width, int height, uint8_t *fy, uint8_t *fu, uint8_t *fv);
 
     void setCodecType(int type);
 };

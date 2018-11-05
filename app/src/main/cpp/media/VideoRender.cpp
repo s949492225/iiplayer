@@ -21,6 +21,7 @@ void VideoRender::play() {
 
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
+    FILE *fp_yuv = fopen("/sdcard/test.yuv", "wb+");
     while (mStatus != NULL && !mStatus->isExit) {
 
         if (mStatus->isSeek) {
@@ -67,27 +68,28 @@ void VideoRender::playThread() {
                     av_frame_free(&frame);
                     continue;
                 }
-                renderFrame(frame);
+                mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
+                                                     frame->data[0],
+                                                     frame->data[1],
+                                                     frame->data[2]);
             } else {
-                AVFrame *yuvFrame = av_frame_alloc();
+                LOGE("当前视频不是YUV420P格式");
+                AVFrame *pFrameYUV420P = av_frame_alloc();
                 int num = av_image_get_buffer_size(
                         AV_PIX_FMT_YUV420P,
                         mWidth,
                         mHeight,
                         1);
-
                 uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-
                 av_image_fill_arrays(
-                        yuvFrame->data,
-                        yuvFrame->linesize,
+                        pFrameYUV420P->data,
+                        pFrameYUV420P->linesize,
                         buffer,
                         AV_PIX_FMT_YUV420P,
                         mWidth,
                         mHeight,
                         1);
-
-                SwsContext *swsCtx = sws_getContext(
+                SwsContext *sws_ctx = sws_getContext(
                         mWidth,
                         mHeight,
                         mPixFmt,
@@ -96,47 +98,54 @@ void VideoRender::playThread() {
                         AV_PIX_FMT_YUV420P,
                         SWS_BICUBIC, NULL, NULL, NULL);
 
-                if (!swsCtx) {
-                    av_frame_free(&frame);
-                    av_frame_free(&yuvFrame);
+                if (!sws_ctx) {
+                    av_frame_free(&pFrameYUV420P);
+                    av_free(pFrameYUV420P);
                     av_free(buffer);
                     continue;
                 }
-
                 sws_scale(
-                        swsCtx,
-                        (const uint8_t *const *) (frame->data),
+                        sws_ctx,
+                        reinterpret_cast<const uint8_t *const *>(frame->data),
                         frame->linesize,
                         0,
                         frame->height,
-                        yuvFrame->data,
-                        yuvFrame->linesize);
-
-                sws_freeContext(swsCtx);
+                        pFrameYUV420P->data,
+                        pFrameYUV420P->linesize);
 
 
-                double diff = getFrameDiffTime(frame);
-                if (diff < -0.01) {
-                    int sleep = -(int) (diff * 1000);
-                    if (fabs(sleep) > 50) {
-                        sleep = 50;
-                    }
-                    av_usleep(static_cast<unsigned int>(sleep * 1000));
-                    if (mStatus == NULL || mStatus->isExit) {
-                        av_frame_free(&yuvFrame);
-                        av_frame_free(&frame);
-                        av_free(buffer);
-                        break;
-                    }
-                } else if (diff > 0.05) {
-                    av_frame_free(&yuvFrame);
-                    av_frame_free(&frame);
-                    av_free(buffer);
-                    continue;
-                }
+//                double diff = getFrameDiffTime(frame);
+//
+//                if (diff < -0.01) {
+//                    int sleep = -(int) (diff * 1000);
+//                    if (fabs(sleep) > 50) {
+//                        sleep = 50;
+//                    }
+//                    av_usleep(static_cast<unsigned int>(sleep * 1000));
+//                    if (mStatus == NULL || mStatus->isExit) {
+//                        av_frame_free(&yuvFrame);
+//                        av_frame_free(&frame);
+//                        av_free(buffer);
+//                        break;
+//                    }
+//                } else if (diff > 0.05) {
+//                    av_frame_free(&yuvFrame);
+//                    av_frame_free(&frame);
+//                    av_free(buffer);
+//                    continue;
+//                }
 
-                renderFrame(yuvFrame);
-                av_frame_free(&yuvFrame);
+                mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
+                                                     pFrameYUV420P->data[0],
+                                                     pFrameYUV420P->data[1],
+                                                     pFrameYUV420P->data[2]);
+//                int y_size = mWidth * mHeight;
+//                fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
+//                fwrite(yuvFrame->data[1], 1, y_size / 4I, fp_yuv);
+//                fwrite(yuvFrame->data[2], 1, y_size / 4I, fp_yuv);
+
+                sws_freeContext(sws_ctx);
+                av_frame_free(&pFrameYUV420P);
                 av_free(buffer);
 
             }
@@ -147,12 +156,8 @@ void VideoRender::playThread() {
 
 }
 
-void VideoRender::renderFrame(AVFrame *yuvFrame) const {
-    mPlayer->getCallJava()->setFrameData(false, yuvFrame);
-}
-
-double VideoRender::getFrameDiffTime(AVFrame *avFrame) {
-    double pts = av_frame_get_best_effort_timestamp(avFrame);
+double VideoRender::getFrameDiffTime(AVFrame *frame) {
+    double pts = av_frame_get_best_effort_timestamp(frame);
     if (pts == AV_NOPTS_VALUE) {
         pts = 0;
     }

@@ -67,37 +67,31 @@ void CallJava::sendMsg(bool isMain, int type, int data) {
     }
 }
 
-void CallJava::setFrameData(bool isMain, AVFrame *yuvFrame) {
-    JNIEnv *env;
+void CallJava::setFrameData(bool isMain, int width, int height, uint8_t *fy, uint8_t *fu, uint8_t *fv) {
+    JNIEnv *jniEnv;
     if (!isMain) {
-        if (mVm->AttachCurrentThread(&env, 0) != JNI_OK) {
+        if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
             LOGE("CallJava::sendMsg AttachCurrentThread ERROR ")
             return;
         }
     } else {
-        env = mEnv;
+        jniEnv = mEnv;
     }
 
-    int width = yuvFrame->width;
-    int height = yuvFrame->height;
+    jbyteArray y = jniEnv->NewByteArray(width * height);
+    jniEnv->SetByteArrayRegion(y, 0, width * height, reinterpret_cast<const jbyte *>(fy));
 
-    jbyteArray y = env->NewByteArray(width * height);
-    env->SetByteArrayRegion(y, 0, width * height,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[0]));
+    jbyteArray u = jniEnv->NewByteArray(width * height / 4);
+    jniEnv->SetByteArrayRegion(u, 0, width * height / 4, reinterpret_cast<const jbyte *>(fu));
 
-    jbyteArray u = env->NewByteArray(width * height / 4);
-    env->SetByteArrayRegion(u, 0, width * height / 4,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[1]));
+    jbyteArray v = jniEnv->NewByteArray(width * height / 4);
+    jniEnv->SetByteArrayRegion(v, 0, width * height / 4, reinterpret_cast<const jbyte *>(fv));
 
-    jbyteArray v = env->NewByteArray(width * height / 4);
-    env->SetByteArrayRegion(v, 0, width * height / 4,
-                            reinterpret_cast<const jbyte *>(yuvFrame->data[2]));
+    jniEnv->CallVoidMethod(mObj, mJmidSetFrameData, width, height, y, u, v);
 
-    env->CallVoidMethod(mObj, mJmidSetFrameData, width, height, y, u, v);
-
-    env->DeleteLocalRef(y);
-    env->DeleteLocalRef(u);
-    env->DeleteLocalRef(v);
+    jniEnv->DeleteLocalRef(y);
+    jniEnv->DeleteLocalRef(u);
+    jniEnv->DeleteLocalRef(v);
 
     if (!isMain) {
         mVm->DetachCurrentThread();
