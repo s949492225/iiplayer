@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include "time.h"
 #include "../android/CallJava.h"
+#include "AudioDecoder.h"
 
 extern "C" {
 #include "libavutil/time.h"
@@ -30,7 +31,6 @@ extern "C" {
 class MediaPlayer {
 private:
     std::thread *mReadThread = NULL;
-    std::thread *mAudioDecodeThread = NULL;
     std::thread *mVideoDecodeThread = NULL;
 
     pthread_mutex_t mMutexRead;
@@ -44,6 +44,7 @@ private:
     //audio
     int mAudioStreamIndex = -1;
     AVCodecContext *mAudioCodecCtx = NULL;
+    AudioDecoder *mAudioDecoder = NULL;
     AudioRender *mAudioRender = NULL;
     //video
     int mVideoStreamIndex = -1;
@@ -57,8 +58,6 @@ private:
     void setMediaInfo();
 
     void readThread();
-
-    void decodeAudio();
 
     void decodeVideo();
 
@@ -97,6 +96,8 @@ public:
     jstring getInfo(char *string);
 
     void checkBuffer(AVPacket *pPacket);
+
+    AudioRender * getAudioRender();
 };
 
 

@@ -27,6 +27,7 @@ void MediaPlayer::open(const char *url) {
     this->mUrl = url;
     this->mStatus = new Status();
     mReadThread = new std::thread(std::bind(&MediaPlayer::readThread, this));
+    mAudioDecoder = new AudioDecoder(this);
 }
 
 
@@ -92,8 +93,7 @@ int MediaPlayer::prepare() {
     setMediaInfo();
 
     sendMsg(false, ACTION_PLAY_PREPARED);
-    //start audio decode thread
-    mAudioDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeAudio, this));
+    mAudioDecoder->start(mAudioCodecCtx);
     mVideoDecodeThread = new std::thread(std::bind(&MediaPlayer::decodeVideo, this));
     return 0;
 }
@@ -170,11 +170,11 @@ void MediaPlayer::checkBuffer(AVPacket *packet) {
     mCallJava->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
 
-long getCurrentTime() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
+//long getCurrentTime() {
+//    struct timeval tv;
+//    gettimeofday(&tv, NULL);
+//    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+//}
 
 void MediaPlayer::decodeVideo() {
     if (LOG_DEBUG) {
@@ -209,7 +209,7 @@ void MediaPlayer::decodeVideo() {
 
         frame = av_frame_alloc();
         ret = avcodec_receive_frame(mVideoCodecCtx, frame);
-        long time1 = getCurrentTime();
+//        long time1 = getCurrentTime();
 //        LOGD("解码的时长:%ld", time1 - time0);
         if (ret == 0) {
 
@@ -233,67 +233,6 @@ void MediaPlayer::decodeVideo() {
     }
 }
 
-void MediaPlayer::decodeAudio() {
-    if (LOG_DEBUG) {
-        LOGD("音频解码线程开始,tid:%i\n", gettid())
-    }
-    AVPacket *packet = NULL;
-    AVFrame *frame = NULL;
-    int ret = 0;
-
-    while (mStatus != NULL && !mStatus->isExit) {
-
-        if (mStatus->isSeek) {
-            av_usleep(1000 * 100);
-            continue;
-        }
-
-        if (mStatus->isPause) {
-            av_usleep(1000 * 100);
-            continue;
-        }
-
-        packet = av_packet_alloc();
-        if (mStatus->mAudioQueue->getPacket(packet) != 0) {
-            av_packet_free(&packet);
-            continue;
-        }
-        ret = avcodec_send_packet(mAudioCodecCtx, packet);
-        if (ret != 0) {
-            av_packet_free(&packet);
-            continue;
-        }
-
-        frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mAudioCodecCtx, frame);
-        if (ret == 0) {
-
-            if (frame->channels && frame->channel_layout == 0) {
-                frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
-                        frame->channels));
-            } else if (frame->channels == 0 && frame->channel_layout > 0) {
-                frame->channels = av_get_channel_layout_nb_channels(
-                        frame->channel_layout);
-            }
-            while (mStatus != NULL && !mStatus->isExit && mAudioRender->isQueueFull()) {
-                av_usleep(1000 * 5);
-            }
-            if (mStatus == NULL || mStatus->isExit) {
-                av_frame_free(&frame);
-                continue;
-            }
-            if (!mStatus->isSeek) {
-                mAudioRender->putFrame(frame);
-            } else {
-                av_frame_free(&frame);
-            }
-            av_packet_free(&packet);
-        } else {
-            av_frame_free(&frame);
-            av_packet_free(&packet);
-        }
-    }
-}
 
 void MediaPlayer::play() {
     if (mStatus && mAudioRender) {
@@ -394,16 +333,16 @@ void MediaPlayer::release() {
         mVideoRender->notifyWait();
     }
 
+
     if (mReadThread) {
         mReadThread->join();
         delete mReadThread;
         mReadThread = NULL;
     }
 
-    if (mAudioDecodeThread) {
-        mAudioDecodeThread->join();
-        delete mAudioDecodeThread;
-        mAudioDecodeThread = NULL;
+    if (mAudioDecoder!=NULL){
+        delete mAudioDecoder;
+        mAudioDecoder=NULL;
     }
 
     if (mVideoDecodeThread) {
@@ -515,6 +454,10 @@ void MediaPlayer::setMediaInfo() {
 
     mWidth = mVideoCodecCtx->width;
     mHeight = mVideoCodecCtx->height;
+}
+
+AudioRender *MediaPlayer::getAudioRender() {
+    return mAudioRender;
 }
 
 
