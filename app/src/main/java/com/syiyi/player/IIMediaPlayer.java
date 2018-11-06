@@ -4,34 +4,30 @@ import android.graphics.Bitmap;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 import android.view.Surface;
-
 import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnErrorListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
+import com.syiyi.player.listener.OnSeekCompleteListener;
 import com.syiyi.player.opengl.IIGlSurfaceView;
 import com.syiyi.player.opengl.OnGlSurfaceViewCreateListener;
-
 import java.nio.ByteBuffer;
 
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"all"})
 public class IIMediaPlayer {
     private String url = null;
-    @SuppressWarnings("unused")
     private long mNativePlayer;
     private int mDuration;
-    private Handler mHandler;
+    private Handler mHandler = new EventHandler(this);
     private boolean isSoftOnly = false;
     private OnPrepareListener mPrepareListener;
     private OnPlayTimeListener mPlayTimeListener;
     private OnBufferTimeListener mBufferTimeListener;
     private OnErrorListener mErrorListener;
-
+    private OnSeekCompleteListener mOnSeekCompleteListener;
     private IIGlSurfaceView mSurfaceView;
 
     private Surface mSurface;
@@ -39,10 +35,15 @@ public class IIMediaPlayer {
     private MediaCodec mMediaCodec;
     private MediaCodec.BufferInfo info;
 
-    @SuppressWarnings("unused")
     protected static class Code {
         static final int ERROR_OPEN_FILE = -1;
         static final int ERROR_FIND_STREAM = -2;
+        static final int ERROR_AUDIO_DECODEC_EXCEPTION = -3;
+        static final int ERROR_VIDEO_DECODEC_EXCEPTION = -4;
+        static final int ERROR_REDAD_EXCEPTION = -5;
+        static final int ERROR_OPEN_HARD_CODEC = -6;
+        static final int ERROR_SURFACE_NULL = -7;
+        static final int ERROR_JNI = -8;
         static final int DATA_DURATION = 100;
         static final int DATA_NOW_PLAYING_TIME = 101;
         static final int DATA_BUFFER_TIME = 102;
@@ -58,6 +59,65 @@ public class IIMediaPlayer {
         static final int ACTION_PLAY_FINISH = 10;
     }
 
+    protected static class EventHandler extends Handler {
+        private IIMediaPlayer mPlayer;
+
+        public EventHandler(IIMediaPlayer player) {
+            this.mPlayer = player;
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case Code.ERROR_OPEN_FILE:
+                case Code.ERROR_FIND_STREAM:
+                case Code.ERROR_AUDIO_DECODEC_EXCEPTION:
+                case Code.ERROR_VIDEO_DECODEC_EXCEPTION:
+                case Code.ERROR_REDAD_EXCEPTION:
+                case Code.ERROR_OPEN_HARD_CODEC:
+                case Code.ERROR_SURFACE_NULL:
+                case Code.ERROR_JNI:
+                    mPlayer.onError(msg.arg1);
+                    break;
+                case Code.ACTION_PLAY_PREPARED:
+                    mPlayer.onPrepared();
+                    break;
+                case Code.DATA_DURATION:
+                    mPlayer.onGetDuration(msg.arg1);
+                    break;
+                case Code.DATA_NOW_PLAYING_TIME:
+                    mPlayer.onPlayTimeUpdate(msg.arg1);
+                    break;
+                case Code.DATA_BUFFER_TIME:
+                    mPlayer.onBufferTimeUpdate(msg.arg1);
+                    break;
+                case Code.ACTION_PLAY:
+                    mPlayer.onPlaying(true);
+                    break;
+                case Code.ACTION_PLAY_SEEK_OVER:
+                    mPlayer.onSeekComplete();
+                    break;
+                case Code.ACTION_PLAY_PAUSE:
+                    mPlayer.onPlaying(false);
+                    break;
+                case Code.ACTION_PLAY_LOADING:
+                    mPlayer.onLoading(true);
+                    break;
+                case Code.ACTION_PLAY_LOADING_OVER:
+                    mPlayer.onLoading(false);
+                    break;
+                case Code.ACTION_PLAY_STOP:
+                    mPlayer.onPlaying(false);
+                    break;
+                case Code.ACTION_PLAY_FINISH:
+                    mPlayer.onFinish();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
     static {
         System.loadLibrary("player");
         System.loadLibrary("avcodec");
@@ -68,11 +128,6 @@ public class IIMediaPlayer {
         System.loadLibrary("postproc");
         System.loadLibrary("swresample");
         System.loadLibrary("swscale");
-    }
-
-
-    public IIMediaPlayer() {
-        initHandler();
     }
 
     public void setDataSource(String url) {
@@ -109,19 +164,16 @@ public class IIMediaPlayer {
         nativeOpen(url);
     }
 
-    @SuppressWarnings("unused")
-    public void sendMessage(Message msg) {
+    private void sendMessage(Message msg) {
         mHandler.sendMessage(msg);
     }
 
-    @SuppressWarnings("unused")
     private void setFrameData(int width, int height, byte[] y, byte[] u, byte[] v) {
         if (mSurfaceView != null) {
             mSurfaceView.setFrameData(width, height, y, u, v);
         }
     }
 
-    @SuppressWarnings("unused")
     private void setCodecType(int type) {
         if (mSurfaceView != null) {
             mSurfaceView.setCodecType(type);
@@ -149,21 +201,18 @@ public class IIMediaPlayer {
     }
 
     protected void onError(int code) {
-        Log.d("iiplayer", "onOpenFail");
         if (mErrorListener != null) {
             mErrorListener.onError(code);
         }
     }
 
     protected void onPrepared() {
-        Log.d("iiplayer", "onPrepared");
         if (mPrepareListener != null) {
             mPrepareListener.onPrepared();
         }
     }
 
     protected void onGetDuration(int sec) {
-        Log.d("iiplayer", "onGetDuration");
         mDuration = sec;
     }
 
@@ -171,11 +220,9 @@ public class IIMediaPlayer {
     }
 
     protected void onLoading(boolean isLoad) {
-        Log.d("iiplayer", "onLoading:" + isLoad);
     }
 
     protected void onFinish() {
-        Log.d("iiplayer", "onFinish");
     }
 
     private native void nativeOpen(String path);
@@ -192,61 +239,28 @@ public class IIMediaPlayer {
 
     private native String nativeGetInfo(String name);
 
-    protected void initHandler() {
-        mHandler = new Handler(Looper.myLooper(), new Handler.Callback() {
-            @Override
-            public boolean handleMessage(Message msg) {
-                switch (msg.what) {
-                    case Code.ERROR_OPEN_FILE:
-                    case Code.ERROR_FIND_STREAM:
-                        onError(msg.arg1);
-                        break;
-                    case Code.ACTION_PLAY_PREPARED:
-                        onPrepared();
-                        break;
-                    case Code.DATA_DURATION:
-                        onGetDuration(msg.arg1);
-                        break;
-                    case Code.DATA_NOW_PLAYING_TIME:
-                        onPlayTimeUpdate(msg.arg1);
-                        break;
-                    case Code.DATA_BUFFER_TIME:
-                        onBufferTimeUpdate(msg.arg1);
-                        break;
-                    case Code.ACTION_PLAY:
-                        onPlaying(true);
-                        break;
-                    case Code.ACTION_PLAY_PAUSE:
-                        onPlaying(false);
-                        break;
-                    case Code.ACTION_PLAY_LOADING:
-                        onLoading(true);
-                        break;
-                    case Code.ACTION_PLAY_LOADING_OVER:
-                        onLoading(false);
-                        break;
-                    case Code.ACTION_PLAY_STOP:
-                        onPlaying(false);
-                        break;
-                    case Code.ACTION_PLAY_FINISH:
-                        onFinish();
-                        break;
-                    default:
-                        break;
-                }
-                return false;
-            }
-        });
+
+    private void onSeekComplete() {
+        if (mOnSeekCompleteListener != null) {
+            mOnSeekCompleteListener.onFinish();
+        }
     }
 
-    private void onBufferTimeUpdate(int arg1) {
-        mBufferTimeListener.onBufferTime(new TimeInfo(arg1, mDuration));
+    private void onBufferTimeUpdate(int current) {
+        if (mBufferTimeListener!=null) {
+            mBufferTimeListener.onBufferTime(new TimeInfo(current, mDuration));
+        }
+    }
+
+    private void onPlayTimeUpdate(int current) {
+        if(mPlayTimeListener!=null) {
+            mPlayTimeListener.onPlayTime(new TimeInfo(current, mDuration));
+        }
 
     }
 
-    private void onPlayTimeUpdate(int arg1) {
-        mPlayTimeListener.onPlayTime(new TimeInfo(arg1, mDuration));
-
+    public void setOnSeekCompleteListener(OnSeekCompleteListener listener) {
+        mOnSeekCompleteListener = listener;
     }
 
     public void setOnPlayTimeListener(OnPlayTimeListener listener) {
@@ -257,8 +271,8 @@ public class IIMediaPlayer {
         mBufferTimeListener = listener;
     }
 
-    public void setErrorListener(OnErrorListener mErrorListener) {
-        this.mErrorListener = mErrorListener;
+    public void setOnErrorListener(OnErrorListener listener) {
+        mErrorListener = listener;
     }
 
     public void setSoftOnly(boolean softOnly) {
@@ -285,13 +299,10 @@ public class IIMediaPlayer {
         return Integer.parseInt(nativeGetInfo("played_time"));
     }
 
-
-    @SuppressWarnings("unused")
     private boolean isSupportHard(String codecName) {
         return VideoSupportUtil.isSupportCodec(codecName);
     }
 
-    @SuppressWarnings("unused")
     private int initMediaCodec(String codeName, int width, int height, byte[] csd0, byte[] csd1) {
         if (mSurface != null) {
             try {
@@ -319,7 +330,6 @@ public class IIMediaPlayer {
 
     }
 
-    @SuppressWarnings("unused")
     public void decodeAVPacket(int datasize, byte[] data) {
         if (mSurface != null && datasize > 0 && data != null && mMediaCodec != null) {
             try {
@@ -342,7 +352,6 @@ public class IIMediaPlayer {
         }
     }
 
-    @SuppressWarnings("unused")
     private void releaseMediaCodec() {
         if (mMediaCodec != null) {
             try {
