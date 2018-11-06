@@ -7,7 +7,10 @@
 #define ERROR_FIND_STREAM -2
 #define ERROR_AUDIO_DECODEC_EXCEPTION -3
 #define ERROR_VIDEO_DECODEC_EXCEPTION -4
-#define ERROR_REDAD_EXCEPTION -4
+#define ERROR_REDAD_EXCEPTION -5
+#define ERROR_OPEN_HARD_CODEC -6
+#define ERROR_SURFACE_NULL -7
+#define ERROR_JNI -8
 #define DATA_DURATION 100
 #define DATA_NOW_PLAYING_TIME 101
 #define DATA_BUFFER_TIME 102
@@ -44,11 +47,10 @@ char *to_char_str(T from) {
 
 void thread_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex, long ms);
 
-template<typename T>
-inline void ii_deletep(T **arg);
+long getCurrentTime();
 
 template<typename T>
-void ii_deletep(T **arg) {
+inline void ii_deletep(T **arg) {
     delete (*arg);
     *arg = NULL;
 }

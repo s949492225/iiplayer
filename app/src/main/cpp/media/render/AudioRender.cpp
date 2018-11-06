@@ -4,12 +4,11 @@
 #include "AudioRender.h"
 #include "../MediaPlayer.h"
 
-AudioRender::AudioRender(MediaPlayer *player, int64_t duration,
-                         AVRational timebase) {
+AudioRender::AudioRender(MediaPlayer *player) {
     mPlayer = player;
-    this->duration = duration;
+    this->duration = mPlayer->mHolder->mFormatCtx->duration;
     mSampleRate = mPlayer->mHolder->mAudioCodecCtx->sample_rate;
-    mTimebase = timebase;
+    mTimebase = mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mAudioStreamIndex]->time_base;
     mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
@@ -91,7 +90,9 @@ int AudioRender::getPcmData() {
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            mPlayer->mClock = frame->pts * av_q2d(mTimebase);
+            if (!mPlayer->mStatus->isSeek) {
+                mPlayer->mClock = frame->pts * av_q2d(mTimebase);
+            }
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;

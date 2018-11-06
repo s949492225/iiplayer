@@ -12,15 +12,15 @@
 #include  "render/VideoRender.h"
 #include  "../android/iiplayer_jni.h"
 #include "../android/CallJava.h"
-#include "decode/AudioDecoder.h"
-#include "decode/VideoDecoder.h"
 #include "reader/PacketReader.h"
 #include "global/LifeSequenceHolder.h"
+#include "decode/BaseDecoder.h"
 
 class MediaPlayer {
 private:
     const char *mUrl = NULL;
     PacketReader *mReader = NULL;
+
     void notifyWait();
 
 public:
@@ -30,14 +30,17 @@ public:
     int mRotation = 0;
     int mWidth = 0;
     int mHeight = 0;
+    bool isOnlySoft = false;
     CallJava *mCallJava = NULL;
-    LifeSequenceHolder *mHolder;
-    AudioDecoder *mAudioDecoder = NULL;
-    VideoDecoder *mVideoDecoder = NULL;
+    LifeSequenceHolder *mHolder = NULL;
+
+    BaseDecoder *mAudioDecoder = NULL;
+    BaseDecoder *mVideoDecoder = NULL;
+
     AudioRender *mAudioRender = NULL;
     VideoRender *mVideoRender = NULL;
 
-    MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject pJobject);
+    MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj);
 
     void open(const char *string);
 
@@ -51,7 +54,7 @@ public:
 
     void stop();
 
-    void release();
+    void release(bool b);
 
     void sendMsg(bool isMain, int type);
 

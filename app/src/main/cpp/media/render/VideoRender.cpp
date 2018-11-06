@@ -5,12 +5,12 @@
 #import "../MediaPlayer.h"
 #include <cstdlib>
 
-VideoRender::VideoRender(MediaPlayer *player, AVRational timebase) {
+VideoRender::VideoRender(MediaPlayer *player) {
     mPlayer = player;
     mPixFmt = mPlayer->mHolder->mVideoCodecCtx->pix_fmt;
     mWidth = mPlayer->mHolder->mVideoCodecCtx->width;
     mHeight = mPlayer->mHolder->mVideoCodecCtx->height;
-    mTimebase = timebase;
+    mTimebase = mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mVideoStreamIndex]->time_base;
     mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("video"));
 
 }

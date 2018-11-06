@@ -17,6 +17,9 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/reader/PacketReader.cpp
         src/main/cpp/media/decode/AudioDecoder.cpp
         src/main/cpp/media/decode/VideoDecoder.cpp
+        src/main/cpp/media/decode/BaseDecoder.cpp
+
+        src/main/cpp/media/decode/HardVideoDecoder.cpp
         src/main/cpp/media/render/AudioRender.cpp
         src/main/cpp/media/render/VideoRender.cpp
         src/main/cpp/android/util.cpp

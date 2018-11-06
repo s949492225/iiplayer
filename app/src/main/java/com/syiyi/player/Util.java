@@ -31,11 +31,12 @@ public class Util {
                 ss = seconds + "";
             }
         }
-        if(totalsecds >= 3600)
-        {
+        if (totalsecds >= 3600) {
             return sh + ":" + sm + ":" + ss;
         }
         return sm + ":" + ss;
 
     }
+
 }
+

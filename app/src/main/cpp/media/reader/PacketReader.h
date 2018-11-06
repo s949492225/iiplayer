@@ -25,7 +25,12 @@ private:
     std::thread *mReadThread = NULL;;
     pthread_mutex_t mMutexRead;
     MediaPlayer *mPlayer = NULL;
+
     void read();
+
+    bool isHardCodec() const;
+
+    void initBitStreamFilter();
 
 public:
     PacketReader(MediaPlayer *player);
@@ -45,6 +50,8 @@ public:
     void seek(int sec);
 
     void notifyWait();
+
+
 };
 
 

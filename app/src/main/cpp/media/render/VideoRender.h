@@ -24,7 +24,7 @@ class MediaPlayer;
 class VideoRender {
 public:
 
-    VideoRender(MediaPlayer *player, AVRational timebase);
+    VideoRender(MediaPlayer *player);
 
     ~VideoRender();
 

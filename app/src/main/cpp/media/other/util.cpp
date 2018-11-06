@@ -39,6 +39,12 @@ int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecCon
     return 0;
 }
 
+long getCurrentTime() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 void thread_wait(pthread_cond_t *__cond, pthread_mutex_t *__mutex, long timeout_ms) {
     struct timespec abstime;
     abstime.tv_sec = time(NULL) + timeout_ms / 1000;

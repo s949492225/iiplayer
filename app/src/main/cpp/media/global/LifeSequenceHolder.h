@@ -18,6 +18,8 @@ public:
     AVFormatContext *mFormatCtx = NULL;
     AVCodecContext *mAudioCodecCtx = NULL;
     AVCodecContext *mVideoCodecCtx = NULL;
+    AVCodecParameters *mVideoCodecParam = NULL;
+    AVBSFContext *mAbsCtx = NULL;
     int mAudioStreamIndex = -1;
     int mVideoStreamIndex = -1;
     pthread_cond_t mCondRead;

@@ -9,7 +9,8 @@ import android.util.AttributeSet;
  */
 
 public class IIGlSurfaceView extends GLSurfaceView {
-
+    public static final int CODEC_HARD = 1;
+    public static final int CODEC_SOFT = 0;
     private GlRender glRender;
 
     public IIGlSurfaceView(Context context) {

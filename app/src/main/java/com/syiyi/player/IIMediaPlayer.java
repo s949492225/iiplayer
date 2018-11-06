@@ -1,14 +1,22 @@
 package com.syiyi.player;
 
+import android.graphics.Bitmap;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+import android.view.Surface;
 
 import com.syiyi.player.listener.OnBufferTimeListener;
+import com.syiyi.player.listener.OnErrorListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.opengl.IIGlSurfaceView;
+import com.syiyi.player.opengl.OnGlSurfaceViewCreateListener;
+
+import java.nio.ByteBuffer;
 
 
 @SuppressWarnings("WeakerAccess")
@@ -18,10 +26,18 @@ public class IIMediaPlayer {
     private long mNativePlayer;
     private int mDuration;
     private Handler mHandler;
+    private boolean isSoftOnly = false;
     private OnPrepareListener mPrepareListener;
     private OnPlayTimeListener mPlayTimeListener;
     private OnBufferTimeListener mBufferTimeListener;
+    private OnErrorListener mErrorListener;
+
     private IIGlSurfaceView mSurfaceView;
+
+    private Surface mSurface;
+    private MediaFormat mMediaFormat;
+    private MediaCodec mMediaCodec;
+    private MediaCodec.BufferInfo info;
 
     @SuppressWarnings("unused")
     protected static class Code {
@@ -63,8 +79,19 @@ public class IIMediaPlayer {
         this.url = url;
     }
 
-    public void setSurfaceView(IIGlSurfaceView mRender) {
-        this.mSurfaceView = mRender;
+    public void setSurfaceView(IIGlSurfaceView view) {
+        mSurfaceView = view;
+        mSurfaceView.setOnGlSurfaceViewOncreateListener(new OnGlSurfaceViewCreateListener() {
+            @Override
+            public void onGlSurfaceCreated(Surface surface) {
+                mSurface = surface;
+            }
+
+            @Override
+            public void onCutVideoImg(Bitmap bitmap) {
+
+            }
+        });
     }
 
     public void prepareAsync(OnPrepareListener listener) {
@@ -121,8 +148,11 @@ public class IIMediaPlayer {
         nativeSeek(sec);
     }
 
-    protected void onOpenFail() {
+    protected void onError(int code) {
         Log.d("iiplayer", "onOpenFail");
+        if (mErrorListener != null) {
+            mErrorListener.onError(code);
+        }
     }
 
     protected void onPrepared() {
@@ -169,7 +199,7 @@ public class IIMediaPlayer {
                 switch (msg.what) {
                     case Code.ERROR_OPEN_FILE:
                     case Code.ERROR_FIND_STREAM:
-                        onOpenFail();
+                        onError(msg.arg1);
                         break;
                     case Code.ACTION_PLAY_PREPARED:
                         onPrepared();
@@ -227,6 +257,13 @@ public class IIMediaPlayer {
         mBufferTimeListener = listener;
     }
 
+    public void setErrorListener(OnErrorListener mErrorListener) {
+        this.mErrorListener = mErrorListener;
+    }
+
+    public void setSoftOnly(boolean softOnly) {
+        isSoftOnly = softOnly;
+    }
 
     public int getWidth() {
         return Integer.parseInt(nativeGetInfo("width"));
@@ -246,6 +283,80 @@ public class IIMediaPlayer {
 
     public int getPlayedTime() {
         return Integer.parseInt(nativeGetInfo("played_time"));
+    }
+
+
+    @SuppressWarnings("unused")
+    private boolean isSupportHard(String codecName) {
+        return VideoSupportUtil.isSupportCodec(codecName);
+    }
+
+    @SuppressWarnings("unused")
+    private int initMediaCodec(String codeName, int width, int height, byte[] csd0, byte[] csd1) {
+        if (mSurface != null) {
+            try {
+                mSurfaceView.setCodecType(IIGlSurfaceView.CODEC_HARD);
+                String mime = VideoSupportUtil.findVideoCodecName(codeName);
+                mMediaFormat = MediaFormat.createVideoFormat(mime, width, height);
+                mMediaFormat.setInteger(MediaFormat.KEY_WIDTH, width);
+                mMediaFormat.setInteger(MediaFormat.KEY_HEIGHT, height);
+                mMediaFormat.setLong(MediaFormat.KEY_MAX_INPUT_SIZE, width * height);
+                mMediaFormat.setByteBuffer("csd-0", ByteBuffer.wrap(csd0));
+                mMediaFormat.setByteBuffer("csd-1", ByteBuffer.wrap(csd1));
+
+                mMediaCodec = MediaCodec.createDecoderByType(mime);
+
+                info = new MediaCodec.BufferInfo();
+                mMediaCodec.configure(mMediaFormat, mSurface, null, 0);
+                mMediaCodec.start();
+                return 0;
+            } catch (Exception e) {
+                return -1;
+            }
+        } else {
+            return -2;
+        }
+
+    }
+
+    @SuppressWarnings("unused")
+    public void decodeAVPacket(int datasize, byte[] data) {
+        if (mSurface != null && datasize > 0 && data != null && mMediaCodec != null) {
+            try {
+                int intputBufferIndex = mMediaCodec.dequeueInputBuffer(10);
+                if (intputBufferIndex >= 0) {
+                    ByteBuffer byteBuffer = mMediaCodec.getInputBuffers()[intputBufferIndex];
+                    byteBuffer.clear();
+                    byteBuffer.put(data);
+                    mMediaCodec.queueInputBuffer(intputBufferIndex, 0, datasize, 0, 0);
+                }
+                int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(info, 10);
+                while (outputBufferIndex >= 0) {
+                    mMediaCodec.releaseOutputBuffer(outputBufferIndex, true);
+                    outputBufferIndex = mMediaCodec.dequeueOutputBuffer(info, 10);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private void releaseMediaCodec() {
+        if (mMediaCodec != null) {
+            try {
+                mMediaCodec.flush();
+                mMediaCodec.stop();
+                mMediaCodec.release();
+            } catch (Exception e) {
+                //ignore
+            }
+            mMediaCodec = null;
+            mMediaFormat = null;
+            info = null;
+        }
+
     }
 
 }

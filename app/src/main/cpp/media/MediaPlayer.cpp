@@ -15,61 +15,72 @@ void MediaPlayer::open(const char *url) {
     if (LOG_DEBUG) {
         LOGD("media_player open url:%s\n", url)
     }
-    this->mUrl = url;
-    this->mStatus = new Status();
+    mUrl = url;
+    mStatus = new Status();
+    isOnlySoft = mCallJava->isSoftOnly(true);
     mReader = new PacketReader(this);
-    mAudioDecoder = new AudioDecoder(this);
-    mVideoDecoder = new VideoDecoder(this);
 }
 
 
 void MediaPlayer::play() {
-    if (mStatus && mAudioRender) {
+    if (mStatus) {
         mStatus->isPause = false;
-        mAudioRender->play();
-        mVideoRender->play();
+        if (mAudioRender) {
+            mAudioRender->play();
+        }
+        if (mVideoRender) {
+            mVideoRender->play();
+        }
         sendMsg(true, ACTION_PLAY);
     }
 }
 
 void MediaPlayer::pause() {
-    if (mStatus && mAudioRender) {
+    if (mStatus) {
         mStatus->isPause = true;
-        mAudioRender->pause();
+        if (mAudioRender) {
+            mAudioRender->pause();
+        }
         sendMsg(true, ACTION_PLAY_PAUSE);
     }
 }
 
 void MediaPlayer::resume() {
-    if (mStatus && mAudioRender) {
+    if (mStatus) {
         mStatus->isPause = false;
-        mAudioRender->resume();
+        if (mAudioRender) {
+            mAudioRender->resume();
+        }
         sendMsg(true, ACTION_PLAY);
     }
 }
 
 void MediaPlayer::seek(int sec) {
-    mReader->seek(sec);
+    if (mReader) {
+        mReader->seek(sec);
+    }
 }
 
 void MediaPlayer::stop() {
     sendMsg(true, ACTION_PLAY_STOP);
-    release();
+    release(true);
 
 }
 
 void MediaPlayer::sendMsg(bool isMain, int type, int data) {
     switch (type) {
-        case
-            ERROR_OPEN_FILE
-            ERROR_FIND_STREAM
-            ERROR_AUDIO_DECODEC_EXCEPTION
-            ERROR_VIDEO_DECODEC_EXCEPTION
-            ERROR_REDAD_EXCEPTION:
-            release();
+        case ERROR_OPEN_FILE:
+        case ERROR_FIND_STREAM:
+        case ERROR_AUDIO_DECODEC_EXCEPTION:
+        case ERROR_VIDEO_DECODEC_EXCEPTION:
+        case ERROR_REDAD_EXCEPTION:
+        case ERROR_OPEN_HARD_CODEC:
+        case ERROR_SURFACE_NULL:
+        case ERROR_JNI:
+            release(false);
             break;
         case ACTION_PLAY_FINISH:
-            release();
+            release(false);
             break;
         default:
             break;
@@ -130,7 +141,7 @@ void MediaPlayer::notifyWait() {
     }
 }
 
-void MediaPlayer::release() {
+void MediaPlayer::release(bool isMain) {
 
     if (mStatus) {
         mStatus->isLoad = false;
@@ -143,6 +154,7 @@ void MediaPlayer::release() {
     ii_deletep(&mVideoDecoder);
     ii_deletep(&mAudioRender);
     ii_deletep(&mVideoRender);
+    mCallJava->releaseMediaCodec(isMain);
     ii_deletep(&mStatus);
     ii_deletep(&mHolder);
     ii_deletep(&mCallJava);

@@ -5,19 +5,12 @@
 #include "AudioDecoder.h"
 #include "../MediaPlayer.h"
 
-AudioDecoder::AudioDecoder(MediaPlayer *player) {
-    mPlayer = player;
-    mQueue = new PacketQueue(mPlayer->mStatus,mPlayer->mHolder, const_cast<char *>("audio"));
+AudioDecoder::AudioDecoder(MediaPlayer *player) : BaseDecoder(player) {
+
 }
 
-AudioDecoder::~AudioDecoder() {
-    mDecodeThread->join();
-    mDecodeThread = NULL;
-    mPlayer = NULL;
-}
-
-void AudioDecoder::start() {
-    mDecodeThread = new std::thread(std::bind(&AudioDecoder::decode, this));
+void AudioDecoder::init() {
+    start();
 }
 
 void AudioDecoder::decode() {
@@ -45,7 +38,7 @@ void AudioDecoder::decode() {
             av_packet_free(&packet);
             continue;
         }
-        
+
         ret = avcodec_send_packet(mPlayer->mHolder->mAudioCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
@@ -71,7 +64,7 @@ void AudioDecoder::decode() {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getAudioRender()&&!mPlayer->mStatus->isSeek) {
+            if (mPlayer->getAudioRender() && !mPlayer->mStatus->isSeek) {
                 mPlayer->getAudioRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);
@@ -83,3 +76,4 @@ void AudioDecoder::decode() {
         }
     }
 }
+

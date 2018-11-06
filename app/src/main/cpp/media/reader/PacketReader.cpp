@@ -8,6 +8,7 @@
 #include "../render/AudioRender.h"
 #include "../decode/VideoDecoder.h"
 #include "../render/VideoRender.h"
+#include "../decode/HardVideoDecoder.h"
 #include <unistd.h>
 
 #define MAX_QUEUE_SIZE (1024*1024)
@@ -21,11 +22,12 @@ PacketReader::PacketReader(MediaPlayer *player) {
 }
 
 PacketReader::~PacketReader() {
-    mReadThread->join();
-    mReadThread = NULL;
-    pthread_mutex_destroy(&mMutexRead);
+    if (mReadThread) {
+        mReadThread->join();
+        mReadThread = NULL;
+        pthread_mutex_destroy(&mMutexRead);
+    }
 }
-
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
@@ -72,36 +74,51 @@ int PacketReader::prepare() {
                     mPlayer->sendMsg(false, ERROR_AUDIO_DECODEC_EXCEPTION);
                     return -1;
                 }
-                int64_t sumTime = mPlayer->mHolder->mFormatCtx->duration;
-                mPlayer->mAudioRender = new AudioRender(mPlayer, sumTime,
-                                                        mPlayer->mHolder->mFormatCtx->streams[i]->time_base);
                 mPlayer->mHolder->mAudioStreamIndex = i;
-                mPlayer->mDuration = static_cast<int>(sumTime / AV_TIME_BASE);
+                mPlayer->mDuration = static_cast<int>(mPlayer->mHolder->mFormatCtx->duration /
+                                                      AV_TIME_BASE);
                 mPlayer->sendMsg(false, DATA_DURATION, mPlayer->mDuration);
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
+                mPlayer->mHolder->mVideoCodecParam = parameters;
                 int ret = get_codec_context(parameters, &mPlayer->mHolder->mVideoCodecCtx);
                 if (ret < 0) {
                     mPlayer->sendMsg(false, ERROR_VIDEO_DECODEC_EXCEPTION, mPlayer->mDuration);
                     return -1;
                 }
-                mPlayer->mCallJava->setCodecType(0);
-                mPlayer->mVideoRender = new VideoRender(mPlayer,
-                                                        mPlayer->mHolder->mFormatCtx->streams[i]->time_base);
                 mPlayer->mHolder->mVideoStreamIndex = i;
+
             }
         }
     }
 
     setMediaInfo();
 
+    initBitStreamFilter();
+
     mPlayer->sendMsg(false, ACTION_PLAY_PREPARED);
-    mPlayer->mAudioDecoder->start();
-    mPlayer->mVideoDecoder->start();
+
+    mPlayer->mAudioDecoder = new AudioDecoder(mPlayer);
+    mPlayer->mAudioDecoder->init();
+    mPlayer->mAudioRender = new AudioRender(mPlayer);
+
+    if (isHardCodec()) {
+        mPlayer->mCallJava->setCodecType(DECODE_HARD);
+        mPlayer->mVideoDecoder = new HardVideoDecoder(mPlayer);
+        mPlayer->mVideoDecoder->init();
+    } else {
+        mPlayer->mCallJava->setCodecType(DECODE_SOFT);
+        mPlayer->mVideoDecoder = new VideoDecoder(mPlayer);
+        mPlayer->mVideoRender = new VideoRender(mPlayer);
+        mPlayer->mVideoDecoder->init();
+    }
     return 0;
 }
 
+bool PacketReader::isHardCodec() const {
+    return !mPlayer->isOnlySoft && mPlayer->mHolder->mAbsCtx != NULL;
+}
 
 void PacketReader::read() {
     if (LOG_DEBUG) {
@@ -111,6 +128,7 @@ void PacketReader::read() {
     if (error_code < 0) {
         return;
     }
+
     //read packet
     while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit && !mPlayer->mStatus->isPlayEnd) {
 
@@ -130,12 +148,12 @@ void PacketReader::read() {
             continue;
         }
         bool isSizeOver =
-                mPlayer->mVideoDecoder->mQueue->getQueueSize() +
-                mPlayer->mAudioDecoder->mQueue->getQueueSize() >
+                mPlayer->mVideoDecoder->getQueueSize() +
+                mPlayer->mAudioDecoder->getQueueSize() >
                 MAX_QUEUE_SIZE;
-        bool isAudioNeed = mPlayer->mAudioDecoder->mQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
-        bool isVideoNeed = mPlayer->mVideoDecoder->mQueue->getQueueSize() > MAX_QUEUE_SIZE / 2;
-        if (isSizeOver && isAudioNeed && isVideoNeed) {
+        bool isAudioNeed = mPlayer->mAudioDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isVideoNeed = mPlayer->mVideoDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        if (isSizeOver & isAudioNeed & isVideoNeed) {
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mPlayer->mHolder->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
@@ -145,14 +163,35 @@ void PacketReader::read() {
         AVPacket *packet = av_packet_alloc();
         int ret;
         if ((ret = av_read_frame(mPlayer->mHolder->mFormatCtx, packet)) == 0) {
+
             if (packet->stream_index == mPlayer->mHolder->mVideoStreamIndex) {
-                mPlayer->mVideoDecoder->mQueue->putPacket(packet);
+
+                if (isHardCodec()) {
+                    if (mPlayer->mHolder->mAbsCtx != NULL) {
+                        if (av_bsf_send_packet(mPlayer->mHolder->mAbsCtx, packet) != 0) {
+                            av_packet_free(&packet);
+                            continue;
+                        }
+                        int recSuccess = 0;
+                        while (recSuccess == 0) {
+                            AVPacket *newPacket = av_packet_alloc();
+                            recSuccess = av_bsf_receive_packet(mPlayer->mHolder->mAbsCtx,
+                                                               newPacket);
+                            mPlayer->mVideoDecoder->putPacket(newPacket);
+                        }
+                        av_packet_free(&packet);
+                    }
+                } else {
+                    mPlayer->mVideoDecoder->putPacket(packet);
+                }
+
             } else if (packet->stream_index == mPlayer->mHolder->mAudioStreamIndex) {
-                mPlayer->mAudioDecoder->mQueue->putPacket(packet);
+                mPlayer->mAudioDecoder->putPacket(packet);
                 checkBuffer(packet);
             } else {
                 av_packet_free(&packet);
             }
+
         } else {
             av_packet_free(&packet);
             if ((ret == AVERROR_EOF || avio_feof(mPlayer->mHolder->mFormatCtx->pb) == 0)) {
@@ -170,6 +209,39 @@ void PacketReader::read() {
     }
 }
 
+void PacketReader::initBitStreamFilter() {
+    const AVBitStreamFilter *filter = NULL;
+    const char *codecName = mPlayer->mHolder->mVideoCodecCtx->codec->name;
+    if (mPlayer->mCallJava->isSupportHard(false, codecName)) {
+        if (strcasecmp(codecName, "h264") == 0) {
+            filter = av_bsf_get_by_name("h264_mp4toannexb");
+        } else if (strcasecmp(codecName, "h265") == 0) {
+            filter = av_bsf_get_by_name("hevc_mp4toannexb");
+        }
+    }
+
+    if (filter == NULL) {
+        return;
+    }
+
+    if (av_bsf_alloc(filter, &mPlayer->mHolder->mAbsCtx) != 0) {
+        return;
+    }
+    if (avcodec_parameters_copy(mPlayer->mHolder->mAbsCtx->par_in,
+                                mPlayer->mHolder->mVideoCodecParam) < 0) {
+        av_bsf_free(&mPlayer->mHolder->mAbsCtx);
+        mPlayer->mHolder->mAbsCtx = NULL;
+        return;
+    }
+    if (av_bsf_init(mPlayer->mHolder->mAbsCtx) != 0) {
+        av_bsf_free(&mPlayer->mHolder->mAbsCtx);
+        mPlayer->mHolder->mAbsCtx = NULL;
+        return;
+    }
+    mPlayer->mHolder->mAbsCtx->time_base_in = mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mVideoStreamIndex]->time_base;
+
+}
+
 
 void PacketReader::handlerSeek() {
     //seek io
@@ -178,11 +250,13 @@ void PacketReader::handlerSeek() {
                                  AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
         //clear
-        mPlayer->mAudioDecoder->mQueue->clearAll();
-        mPlayer->mVideoDecoder->mQueue->clearAll();
+        mPlayer->mAudioDecoder->clearQueue();
+        mPlayer->mVideoDecoder->clearQueue();
 
         mPlayer->mAudioRender->clearQueue();
-        mPlayer->mVideoRender->clearQueue();
+        if (mPlayer->mVideoRender) {
+            mPlayer->mVideoRender->clearQueue();
+        }
         mPlayer->mClock = mPlayer->mStatus->mSeekSec;
     } else {
         LOGE("seek fail")
@@ -246,6 +320,6 @@ void PacketReader::seek(int sec) {
 
 void PacketReader::notifyWait() {
     pthread_cond_signal(&mPlayer->mHolder->mCondRead);
-    mPlayer->mAudioDecoder->mQueue->notifyAll();
-    mPlayer->mVideoDecoder->mQueue->notifyAll();
+    mPlayer->mAudioDecoder->notifyWait();
+    mPlayer->mVideoDecoder->notifyWait();
 }

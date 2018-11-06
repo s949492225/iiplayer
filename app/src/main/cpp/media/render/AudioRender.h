@@ -66,7 +66,7 @@ public:
     MediaPlayer *mPlayer = NULL;
     AVRational mTimebase;
 
-    AudioRender(MediaPlayer *status, int64_t duration,AVRational timebase);
+    AudioRender(MediaPlayer *status);
 
     ~AudioRender();
 

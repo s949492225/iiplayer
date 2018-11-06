@@ -4,27 +4,12 @@
 
 #include "VideoDecoder.h"
 #include "../MediaPlayer.h"
-
-VideoDecoder::VideoDecoder(MediaPlayer *player) {
-    mPlayer = player;
-    mQueue = new PacketQueue(mPlayer->mStatus, mPlayer->mHolder, const_cast<char *>("video"));
+VideoDecoder::VideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 }
 
-VideoDecoder::~VideoDecoder() {
-    mDecodeThread->join();
-    mDecodeThread = NULL;
-    mPlayer = NULL;
+void VideoDecoder::init() {
+    start();
 }
-
-void VideoDecoder::start() {
-    mDecodeThread = new std::thread(std::bind(&VideoDecoder::decode, this));
-}
-
-//long getCurrentTime() {
-//    struct timeval tv;
-//    gettimeofday(&tv, NULL);
-//    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-//}
 
 void VideoDecoder::decode() {
     if (LOG_DEBUG) {
@@ -50,8 +35,7 @@ void VideoDecoder::decode() {
             av_packet_free(&packet);
             continue;
         }
-//        long time0 = getCurrentTime();
-        
+
         ret = avcodec_send_packet(mPlayer->mHolder->mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
@@ -60,8 +44,7 @@ void VideoDecoder::decode() {
 
         frame = av_frame_alloc();
         ret = avcodec_receive_frame(mPlayer->mHolder->mVideoCodecCtx, frame);
-//        long time1 = getCurrentTime();
-//        LOGD("解码的时长:%ld", time1 - time0);
+
         if (ret == 0) {
 
             while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit &&
@@ -72,7 +55,7 @@ void VideoDecoder::decode() {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getVideoRender()&&!mPlayer->mStatus->isSeek) {
+            if (mPlayer->getVideoRender() && !mPlayer->mStatus->isSeek) {
                 mPlayer->getVideoRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);
