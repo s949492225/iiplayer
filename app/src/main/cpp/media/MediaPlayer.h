@@ -26,7 +26,7 @@ private:
 public:
     Status *mStatus = NULL;
     double mClock = 0;
-    int mDuration = 0;
+    double mDuration = 0;
     int mRotation = 0;
     int mWidth = 0;
     int mHeight = 0;

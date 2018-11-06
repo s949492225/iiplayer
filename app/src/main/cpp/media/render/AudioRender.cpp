@@ -3,6 +3,7 @@
 
 #include "AudioRender.h"
 #include "../MediaPlayer.h"
+#include <cstdlib>
 
 AudioRender::AudioRender(MediaPlayer *player) {
     mPlayer = player;
@@ -65,9 +66,6 @@ int AudioRender::getPcmData() {
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
-            if (frame->pts == duration) {
-                mPlayer->mStatus->isPlayEnd = true;
-            }
 
             if (mPlayer->mStatus && mPlayer->mStatus->isSeek) {
                 double frame_time = frame->pts * av_q2d(mTimebase);
@@ -113,6 +111,10 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
         int bufferSize = render.getPcmData();
         if (bufferSize > 0) {
             render.mPlayer->mClock += bufferSize / ((double) SAMPLE_SIZE);
+            double diff = render.mPlayer->mClock - render.mPlayer->mDuration;
+            if (diff > -0.01 && diff < 0.01) {
+                render.mPlayer->mStatus->isPlayEnd = true;
+            }
             render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->mClock);
             SLresult result = (*render.mBufferQueue)->Enqueue(render.mBufferQueue,
                                                               (char *) render.mOutBuffer,
