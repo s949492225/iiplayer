@@ -1,5 +1,5 @@
 # iiplayer
-ffmpeg media_codec
+ffmpeg media_codec 面向对象的方式编写的播放器
 面向对象的方式编写的播放器
 
 支持ffmpeg软解码和media_codec硬解码
