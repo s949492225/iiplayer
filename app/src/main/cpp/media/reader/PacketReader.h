@@ -23,7 +23,7 @@ class MediaPlayer;
 class PacketReader {
 private:
     std::thread *mReadThread = NULL;;
-    pthread_mutex_t mMutexRead;
+    pthread_mutex_t mReadMutex;
     MediaPlayer *mPlayer = NULL;
 
     void read();

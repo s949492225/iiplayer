@@ -24,7 +24,7 @@ int PacketQueue::putPacket(AVPacket *packet) {
     pthread_mutex_lock(&mMutex);
 
     mQueue.push(packet);
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
 
     pthread_mutex_unlock(&mMutex);
     return 0;
@@ -33,7 +33,7 @@ int PacketQueue::putPacket(AVPacket *packet) {
 int PacketQueue::getPacket(AVPacket *packet) {
     pthread_mutex_lock(&mMutex);
     int ret = -1;
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mStatus != NULL && !mStatus->isExit && !mStatus->isSeek) {
         if (mQueue.size() > 0) {
             AVPacket *avPacket = mQueue.front();
             if (av_packet_ref(packet, avPacket) == 0) {
@@ -42,12 +42,18 @@ int PacketQueue::getPacket(AVPacket *packet) {
                 av_packet_free(&avPacket);
                 av_free(avPacket);
                 avPacket = NULL;
-                pthread_cond_signal(&mCond);
+                pthread_cond_broadcast(&mCond);
             }
             break;
         } else {
-            pthread_cond_signal(&mHolder->mCondRead);
+            if (strcmp("video", mName) == 0) {
+                LOGE("SEEK, decode getPacket wait")
+            }
+            pthread_cond_broadcast(&mHolder->mReadCond);
             pthread_cond_wait(&mCond, &mMutex);
+            if (strcmp("video", mName) == 0) {
+                LOGE("SEEK, decode getPacket wait over")
+            }
         }
     }
     pthread_mutex_unlock(&mMutex);
@@ -63,7 +69,7 @@ int PacketQueue::getQueueSize() {
 }
 
 void PacketQueue::clearAll() {
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
     pthread_mutex_lock(&mMutex);
 
     while (!mQueue.empty()) {
@@ -77,6 +83,6 @@ void PacketQueue::clearAll() {
 }
 
 void PacketQueue::notifyAll() {
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
 }
 

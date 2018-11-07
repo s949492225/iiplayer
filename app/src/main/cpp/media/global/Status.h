@@ -15,13 +15,14 @@ public:
 
     bool isExit = false;
     bool isPause = true;
-
-
     bool isSeek = false;
     bool isLoad = false;
     bool isPlayEnd = false;
     bool isEOF = false;
     int mSeekSec = 0;
+    int mSeekReadyCount = 0;
+
+
 };
 
 #endif //IIPLAYER_STATUS_H

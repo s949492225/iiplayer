@@ -5,9 +5,17 @@
 #include <pthread.h>
 #include "LifeSequenceHolder.h"
 
+LifeSequenceHolder::LifeSequenceHolder() {
+    pthread_cond_init(&mReadCond, NULL);
+    pthread_cond_init(&mSeekCond, NULL);
+    pthread_mutex_init(&mSeekMutex, NULL);
+}
+
 LifeSequenceHolder::~LifeSequenceHolder() {
 
-    pthread_cond_destroy(&mCondRead);
+    pthread_cond_destroy(&mReadCond);
+    pthread_cond_destroy(&mSeekCond);
+    pthread_mutex_destroy(&mSeekMutex);
 
     if (mVideoCodecParam != NULL) {
         avcodec_parameters_free(&mVideoCodecParam);
@@ -43,3 +51,5 @@ AVRational LifeSequenceHolder::getAudioTimeBase() {
 AVRational LifeSequenceHolder::getVideoTimeBase() {
     return mFormatCtx->streams[mVideoStreamIndex]->time_base;
 }
+
+

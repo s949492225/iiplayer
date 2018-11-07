@@ -22,9 +22,17 @@ void AudioDecoder::decode() {
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
+        //为seek清理异常数据
         if (mPlayer->getStatus()->isSeek) {
+            LOGE("SEEK, decode seek")
+            pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
+            mPlayer->getStatus()->mSeekReadyCount += 1;
+            LOGE("SEEK, decode wait:%i", mPlayer->getStatus()->mSeekReadyCount)
+            pthread_cond_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex);
+            pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
+            //clear
             avcodec_flush_buffers(mPlayer->getHolder()->mAudioCodecCtx);
-            av_usleep(1000 * 10);
+            clearQueue();
             continue;
         }
 
@@ -34,6 +42,7 @@ void AudioDecoder::decode() {
         }
 
         packet = av_packet_alloc();
+
         if (mQueue && mQueue->getPacket(packet) != 0) {
             av_packet_free(&packet);
             continue;
@@ -57,19 +66,17 @@ void AudioDecoder::decode() {
                     frame->channels = av_get_channel_layout_nb_channels(
                             frame->channel_layout);
                 }
-                while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
+                while (!mPlayer->getStatus()->isExit &&
+                       !mPlayer->getStatus()->isSeek &&
                        mPlayer->getAudioRender()->isQueueFull()) {
+
                     av_usleep(1000 * 5);
                 }
-                if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
+                if (mPlayer->getStatus()->isExit || mPlayer->getStatus()->isSeek) {
                     av_frame_free(&frame);
                     break;
                 }
-                if (mPlayer->getAudioRender() && !mPlayer->getStatus()->isSeek) {
-                    mPlayer->getAudioRender()->putFrame(frame);
-                } else {
-                    av_frame_free(&frame);
-                }
+                mPlayer->getAudioRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);
             }

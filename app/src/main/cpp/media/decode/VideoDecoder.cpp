@@ -22,6 +22,7 @@ void VideoDecoder::decode() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             avcodec_flush_buffers(mPlayer->getHolder()->mVideoCodecCtx);
+            clearQueue();
             av_usleep(1000 * 10);
             continue;
         }
@@ -56,11 +57,7 @@ void VideoDecoder::decode() {
                     av_frame_free(&frame);
                     break;
                 }
-                if (mPlayer->getVideoRender() && !mPlayer->getStatus()->isSeek) {
-                    mPlayer->getVideoRender()->putFrame(frame);
-                } else {
-                    av_frame_free(&frame);
-                }
+                mPlayer->getVideoRender()->putFrame(frame);
 
             } else {
                 av_frame_free(&frame);

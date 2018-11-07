@@ -56,6 +56,9 @@ void MediaPlayer::resume() {
 }
 
 void MediaPlayer::seek(int sec) {
+    if (mStatus->isSeek) {
+        return;
+    }
     if (mReader) {
         mReader->seek(sec);
     }

@@ -10,6 +10,7 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include <libavutil/time.h>
 #include <libswresample/swresample.h>
+#include <semaphore.h>
 }
 
 
@@ -22,10 +23,16 @@ public:
     AVBSFContext *mAbsCtx = NULL;
     int mAudioStreamIndex = -1;
     int mVideoStreamIndex = -1;
-    pthread_cond_t mCondRead;
+    pthread_cond_t mReadCond;
+
+    pthread_mutex_t mSeekMutex;
+    pthread_cond_t mSeekCond;
+
+    LifeSequenceHolder();
     ~LifeSequenceHolder();
 
     AVRational getAudioTimeBase();
+
     AVRational getVideoTimeBase();
 };
 

@@ -22,7 +22,7 @@ FrameQueue::~FrameQueue() {
 int FrameQueue::putFrame(AVFrame *packet) {
     pthread_mutex_lock(&mMutex);
     mQueue.push(packet);
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
     pthread_mutex_unlock(&mMutex);
     return 0;
 }
@@ -30,7 +30,7 @@ int FrameQueue::putFrame(AVFrame *packet) {
 int FrameQueue::getFrame(AVFrame *frame) {
     pthread_mutex_lock(&mMutex);
     int ret = -1;
-    while (mStatus != NULL && !mStatus->isExit) {
+    while (mStatus != NULL && !mStatus->isExit && !mStatus->isSeek) {
         if (mQueue.size() > 0) {
             AVFrame *avFrame = mQueue.front();
             if (av_frame_ref(frame, avFrame) == 0) {
@@ -39,7 +39,7 @@ int FrameQueue::getFrame(AVFrame *frame) {
                 av_frame_free(&avFrame);
                 av_free(avFrame);
                 avFrame = NULL;
-                pthread_cond_signal(&mCond);
+                pthread_cond_broadcast(&mCond);
             }
             break;
         } else {
@@ -59,7 +59,7 @@ int FrameQueue::getQueueSize() {
 }
 
 void FrameQueue::clearAll() {
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
     pthread_mutex_lock(&mMutex);
 
     while (!mQueue.empty()) {
@@ -73,6 +73,6 @@ void FrameQueue::clearAll() {
 }
 
 void FrameQueue::notifyAll() {
-    pthread_cond_signal(&mCond);
+    pthread_cond_broadcast(&mCond);
 }
 

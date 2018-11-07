@@ -24,6 +24,7 @@ void VideoRender::playThread() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
         if (mPlayer->getStatus()->isSeek) {
+            clearQueue();
             av_usleep(1000 * 5);
             continue;
         }

@@ -40,6 +40,7 @@ void HardVideoDecoder::decode() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
+            clearQueue();
             continue;
         }
 
@@ -50,6 +51,11 @@ void HardVideoDecoder::decode() {
 
         packet = av_packet_alloc();
         if (mQueue->getPacket(packet) != 0) {
+            av_packet_free(&packet);
+            continue;
+        }
+
+        if(packet->buf==NULL){
             av_packet_free(&packet);
             continue;
         }

@@ -42,13 +42,21 @@ int AudioRender::getPcmData() {
     mOutSize = 0;
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
+        //为seek清理异常数据
         if (mPlayer->getStatus()->isSeek) {
-            av_usleep(1000 * 100);
+            LOGE("SEEK, render seek")
+            pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
+            mPlayer->getStatus()->mSeekReadyCount+=1;
+            LOGE("SEEK, render wait:%i", mPlayer->getStatus()->mSeekReadyCount)
+            pthread_cond_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex);
+            pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
+            //clear
+            clearQueue();
             continue;
         }
 
-        if (mQueue && mQueue->getQueueSize() == 0)//加载中
-        {
+        //加载中
+        if (mQueue && mQueue->getQueueSize() == 0) {
 
             if (!mPlayer->getStatus()->isLoad) {
                 mPlayer->getStatus()->isLoad = true;

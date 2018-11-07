@@ -13,8 +13,7 @@
 
 PacketReader::PacketReader(MediaPlayer *player) {
     mPlayer = player;
-    pthread_mutex_init(&mMutexRead, NULL);
-    pthread_cond_init(&mPlayer->getHolder()->mCondRead, NULL);
+    pthread_mutex_init(&mReadMutex, NULL);
     mReadThread = new std::thread(std::bind(&PacketReader::read, this));
 
 }
@@ -23,7 +22,7 @@ PacketReader::~PacketReader() {
     if (mReadThread) {
         mReadThread->join();
         mReadThread = NULL;
-        pthread_mutex_destroy(&mMutexRead);
+        pthread_mutex_destroy(&mReadMutex);
     }
 }
 
@@ -133,21 +132,38 @@ void PacketReader::read() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
            !mPlayer->getStatus()->isPlayEnd) {
 
+        //文件读完了,但是还能够seek
         if (mPlayer->getStatus()->isEOF && !mPlayer->getStatus()->isSeek) {
-            pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mPlayer->getHolder()->mCondRead, &mMutexRead, 10);
-            pthread_mutex_unlock(&mMutexRead);
+            pthread_mutex_lock(&mReadMutex);
+            thread_wait(&mPlayer->getHolder()->mReadCond, &mReadMutex, 10);
+            pthread_mutex_unlock(&mReadMutex);
             continue;
         }
-
+        //等音频的decoder 和 render清理干净后才可以开始seek,进度条依赖音频所以不管视频
         if (mPlayer->getStatus()->isSeek) {
+            while (true) {
+                pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
+                if (mPlayer->getStatus()->mSeekReadyCount == 2) {
+                    mPlayer->getStatus()->mSeekReadyCount = 0;
+                    pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
+                    break;
+                }
+                thread_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex,
+                            10);
+                pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
+            }
+            if (mPlayer->getStatus()->isExit) {
+                continue;
+            }
             handlerSeek();
+            pthread_cond_broadcast(&mPlayer->getHolder()->mSeekCond);
         }
 
         if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 10);
             continue;
         }
+
         bool isSizeOver =
                 videoDecoder->getQueueSize() +
                 audioDecoder->getQueueSize() >
@@ -155,9 +171,9 @@ void PacketReader::read() {
         bool isAudioNeed = audioDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
         bool isVideoNeed = videoDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
         if (isSizeOver & isAudioNeed & isVideoNeed) {
-            pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mPlayer->getHolder()->mCondRead, &mMutexRead, 10);
-            pthread_mutex_unlock(&mMutexRead);
+            pthread_mutex_lock(&mReadMutex);
+            thread_wait(&mPlayer->getHolder()->mReadCond, &mReadMutex, 10);
+            pthread_mutex_unlock(&mReadMutex);
             continue;
         }
 
@@ -204,9 +220,9 @@ void PacketReader::read() {
                 mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
                 seekErrorPos(static_cast<int>(mPlayer->getClock()));
             }
-            pthread_mutex_lock(&mMutexRead);
-            thread_wait(&mPlayer->getHolder()->mCondRead, &mMutexRead, 10);
-            pthread_mutex_unlock(&mMutexRead);
+            pthread_mutex_lock(&mReadMutex);
+            thread_wait(&mPlayer->getHolder()->mReadCond, &mReadMutex, 10);
+            pthread_mutex_unlock(&mReadMutex);
         }
     }
 }
@@ -251,14 +267,6 @@ void PacketReader::handlerSeek() {
     int ret = avformat_seek_file(mPlayer->getHolder()->mFormatCtx, -1, INT64_MIN, rel, INT64_MAX,
                                  AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
-        //clear
-        mPlayer->getAudioDecoder()->clearQueue();
-        mPlayer->getVideoDecoder()->clearQueue();
-
-        mPlayer->getAudioRender()->clearQueue();
-        if (mPlayer->getVideoRender()) {
-            mPlayer->getVideoRender()->clearQueue();
-        }
         mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
     } else {
         LOGE("seek fail")
@@ -286,7 +294,7 @@ void PacketReader::seekErrorPos(int sec) {
         rel = sec;
     mPlayer->getStatus()->mSeekSec = rel;
     mPlayer->getStatus()->isSeek = true;
-    pthread_cond_signal(&mPlayer->getHolder()->mCondRead);
+    pthread_cond_broadcast(&mPlayer->getHolder()->mReadCond);
 }
 
 void PacketReader::setMediaInfo() {
@@ -316,12 +324,12 @@ void PacketReader::seek(int sec) {
         rel = sec;
     mPlayer->getStatus()->mSeekSec = rel;
     mPlayer->getStatus()->isSeek = true;
+    pthread_cond_broadcast(&mPlayer->getHolder()->mReadCond);
     mPlayer->sendMsg(true, ACTION_PLAY_SEEK);
-    pthread_cond_signal(&mPlayer->getHolder()->mCondRead);
 }
 
 void PacketReader::notifyWait() {
-    pthread_cond_signal(&mPlayer->getHolder()->mCondRead);
+    pthread_cond_broadcast(&mPlayer->getHolder()->mReadCond);
     mPlayer->getAudioDecoder()->notifyWait();
     mPlayer->getVideoDecoder()->notifyWait();
 }
