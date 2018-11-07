@@ -148,6 +148,8 @@ void PacketReader::read() {
                     pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
                     break;
                 }
+                audioDecoder->notifyWait();
+                videoDecoder->notifyWait();
                 thread_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex,
                             10);
                 pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);

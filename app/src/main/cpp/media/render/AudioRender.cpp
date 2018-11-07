@@ -46,7 +46,7 @@ int AudioRender::getPcmData() {
         if (mPlayer->getStatus()->isSeek) {
             LOGE("SEEK, render seek")
             pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
-            mPlayer->getStatus()->mSeekReadyCount+=1;
+            mPlayer->getStatus()->mSeekReadyCount += 1;
             LOGE("SEEK, render wait:%i", mPlayer->getStatus()->mSeekReadyCount)
             pthread_cond_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex);
             pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
@@ -62,7 +62,7 @@ int AudioRender::getPcmData() {
                 mPlayer->getStatus()->isLoad = true;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         } else {
             if (mPlayer->getStatus()->isLoad) {
@@ -75,16 +75,6 @@ int AudioRender::getPcmData() {
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
 
-            if (mPlayer->getStatus() && mPlayer->getStatus()->isSeek) {
-                double frame_time = frame->pts * av_q2d(mTimebase);
-                if (fabs(mPlayer->getStatus()->mSeekSec - frame_time) > 0.01) {
-                    av_frame_free(&frame);
-                    av_free(frame);
-                    frame = NULL;
-                    return 0;
-                }
-            }
-
             if (frame->channels && frame->channel_layout == 0) {
                 frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
                         frame->channels));
@@ -96,9 +86,7 @@ int AudioRender::getPcmData() {
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            if (!mPlayer->getStatus()->isSeek) {
-                mPlayer->setClock(frame->pts * av_q2d(mTimebase));
-            }
+            mPlayer->setClock(frame->pts * av_q2d(mTimebase));
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;

@@ -25,6 +25,7 @@ void AudioDecoder::decode() {
         //为seek清理异常数据
         if (mPlayer->getStatus()->isSeek) {
             LOGE("SEEK, decode seek")
+            mPlayer->getAudioRender()->notifyWait();
             pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
             mPlayer->getStatus()->mSeekReadyCount += 1;
             LOGE("SEEK, decode wait:%i", mPlayer->getStatus()->mSeekReadyCount)
