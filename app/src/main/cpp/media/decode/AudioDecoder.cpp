@@ -21,14 +21,14 @@ void AudioDecoder::decode() {
     AVFrame *frame = NULL;
     int ret = 0;
 
-    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
-        if (mPlayer->mStatus->isSeek) {
+        if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
 
-        if (mPlayer->mStatus->isPause) {
+        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -56,15 +56,15 @@ void AudioDecoder::decode() {
                 frame->channels = av_get_channel_layout_nb_channels(
                         frame->channel_layout);
             }
-            while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit &&
+            while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
                    mPlayer->getAudioRender()->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
+            if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getAudioRender() && !mPlayer->mStatus->isSeek) {
+            if (mPlayer->getAudioRender() && !mPlayer->getStatus()->isSeek) {
                 mPlayer->getAudioRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);

@@ -37,13 +37,13 @@ void HardVideoDecoder::decode() {
     }
     AVPacket *packet = NULL;
 
-    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
-        if (mPlayer->mStatus->isSeek) {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
+        if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
 
-        if (mPlayer->mStatus->isPause) {
+        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -61,7 +61,7 @@ void HardVideoDecoder::decode() {
                 sleep = 50;
             }
             av_usleep(static_cast<unsigned int>(sleep * 1000));
-            if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
+            if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
                 av_packet_free(&packet);
                 break;
             }

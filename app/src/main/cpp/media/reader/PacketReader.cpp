@@ -29,7 +29,7 @@ PacketReader::~PacketReader() {
 
 int ioInterruptCallback(void *ctx) {
     MediaPlayer *player = static_cast<MediaPlayer *>(ctx);
-    if (player->mStatus->isExit) {
+    if (player->getStatus()->isExit) {
         return AVERROR_EOF;
     }
     return 0;
@@ -129,20 +129,21 @@ void PacketReader::read() {
     BaseDecoder *audioDecoder = mPlayer->getAudioDecoder();
     BaseDecoder *videoDecoder = mPlayer->getVideoDecoder();
     //read packet
-    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit && !mPlayer->mStatus->isPlayEnd) {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
+           !mPlayer->getStatus()->isPlayEnd) {
 
-        if (mPlayer->mStatus->isEOF && !mPlayer->mStatus->isSeek) {
+        if (mPlayer->getStatus()->isEOF && !mPlayer->getStatus()->isSeek) {
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mPlayer->getHolder()->mCondRead, &mMutexRead, 10);
             pthread_mutex_unlock(&mMutexRead);
             continue;
         }
 
-        if (mPlayer->mStatus->isSeek) {
+        if (mPlayer->getStatus()->isSeek) {
             handlerSeek();
         }
 
-        if (mPlayer->mStatus->isPause) {
+        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 10);
             continue;
         }
@@ -194,10 +195,11 @@ void PacketReader::read() {
         } else {
             av_packet_free(&packet);
             if ((ret == AVERROR_EOF || avio_feof(mPlayer->getHolder()->mFormatCtx->pb) == 0)) {
-                mPlayer->mStatus->isEOF = true;
+                mPlayer->getStatus()->isEOF = true;
                 continue;
             }
-            if (mPlayer->getHolder()->mFormatCtx->pb && mPlayer->getHolder()->mFormatCtx->pb->error) {
+            if (mPlayer->getHolder()->mFormatCtx->pb &&
+                mPlayer->getHolder()->mFormatCtx->pb->error) {
                 mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
                 seekErrorPos(static_cast<int>(mPlayer->mClock));
             }
@@ -244,7 +246,7 @@ void PacketReader::initBitStreamFilter() {
 
 void PacketReader::handlerSeek() {
     //seek io
-    int64_t rel = mPlayer->mStatus->mSeekSec * AV_TIME_BASE;
+    int64_t rel = mPlayer->getStatus()->mSeekSec * AV_TIME_BASE;
     int ret = avformat_seek_file(mPlayer->getHolder()->mFormatCtx, -1, INT64_MIN, rel, INT64_MAX,
                                  AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
@@ -256,12 +258,12 @@ void PacketReader::handlerSeek() {
         if (mPlayer->getVideoRender()) {
             mPlayer->getVideoRender()->clearQueue();
         }
-        mPlayer->mClock = mPlayer->mStatus->mSeekSec;
+        mPlayer->mClock = mPlayer->getStatus()->mSeekSec;
     } else {
         LOGE("seek fail")
     }
-    mPlayer->mStatus->isEOF = false;
-    mPlayer->mStatus->isSeek = false;
+    mPlayer->getStatus()->isEOF = false;
+    mPlayer->getStatus()->isSeek = false;
     mPlayer->sendMsg(false, ACTION_PLAY_SEEK_OVER);
 }
 
@@ -281,8 +283,8 @@ void PacketReader::seekErrorPos(int sec) {
         rel = static_cast<int>(mPlayer->mDuration);
     else
         rel = sec;
-    mPlayer->mStatus->mSeekSec = rel;
-    mPlayer->mStatus->isSeek = true;
+    mPlayer->getStatus()->mSeekSec = rel;
+    mPlayer->getStatus()->isSeek = true;
     pthread_cond_signal(&mPlayer->getHolder()->mCondRead);
 }
 
@@ -311,8 +313,8 @@ void PacketReader::seek(int sec) {
         rel = static_cast<int>(mPlayer->mDuration);
     else
         rel = sec;
-    mPlayer->mStatus->mSeekSec = rel;
-    mPlayer->mStatus->isSeek = true;
+    mPlayer->getStatus()->mSeekSec = rel;
+    mPlayer->getStatus()->isSeek = true;
     mPlayer->sendMsg(true, ACTION_PLAY_SEEK);
     pthread_cond_signal(&mPlayer->getHolder()->mCondRead);
 }

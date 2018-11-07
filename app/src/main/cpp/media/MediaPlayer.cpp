@@ -188,12 +188,12 @@ void MediaPlayer::setVideoDecoder(BaseDecoder *decoder) {
     mVideoDecoder = decoder;
 }
 
-void MediaPlayer::setCallJava(CallJava *callJava) {
-    mCallJava = callJava;
-}
-
 LifeSequenceHolder *MediaPlayer::getHolder() {
     return mHolder;
+}
+
+Status *MediaPlayer::getStatus() {
+    return mStatus;
 }
 
 

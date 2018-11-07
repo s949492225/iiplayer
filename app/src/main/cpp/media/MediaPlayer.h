@@ -2,8 +2,7 @@
 // Created by 宋林涛 on 2018/10/22.
 //
 
-#ifndef IIPLAYER_MEDIA_PALYER_H
-#define IIPLAYER_MEDIA_PALYER_H
+#pragma once
 
 #include "../android/android_log.h"
 #include "other/util.h"
@@ -20,6 +19,8 @@ class MediaPlayer {
 private:
     const char *mUrl = NULL;
     CallJava *mCallJava = NULL;
+    LifeSequenceHolder *mHolder = NULL;
+    Status *mStatus = NULL;
     PacketReader *mReader = NULL;
     BaseDecoder *mAudioDecoder = NULL;
     BaseDecoder *mVideoDecoder = NULL;
@@ -29,14 +30,12 @@ private:
     void notifyWait();
 
 public:
-    Status *mStatus = NULL;
     double mClock = 0;
     double mDuration = 0;
     int mRotation = 0;
     int mWidth = 0;
     int mHeight = 0;
     bool isOnlySoft = false;
-    LifeSequenceHolder *mHolder = NULL;
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj);
 
@@ -58,6 +57,8 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
+    Status *getStatus();
+
 public:
 
     BaseDecoder *getAudioDecoder();
@@ -76,8 +77,6 @@ public:
 
     void setVideoRender(VideoRender *render);
 
-    void setCallJava(CallJava *callJava);
-
     CallJava *getCallJava();
 
     jstring getInfo(char *string);
@@ -85,7 +84,5 @@ public:
     const char *getUrl();
 
     LifeSequenceHolder *getHolder();
+
 };
-
-
-#endif //IIPLAYER_MEDIA_PALYER_H

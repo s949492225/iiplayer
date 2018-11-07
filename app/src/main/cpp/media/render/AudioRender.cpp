@@ -10,7 +10,7 @@ AudioRender::AudioRender(MediaPlayer *player) {
     this->duration = mPlayer->getHolder()->mFormatCtx->duration;
     mSampleRate = mPlayer->getHolder()->mAudioCodecCtx->sample_rate;
     mTimebase = mPlayer->getHolder()->mFormatCtx->streams[mPlayer->getHolder()->mAudioStreamIndex]->time_base;
-    mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("audio"));
+    mQueue = new FrameQueue(mPlayer->getStatus(), const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
     initSwrCtx(mPlayer->getHolder()->mAudioCodecCtx);
@@ -40,9 +40,9 @@ void AudioRender::play() {
 
 int AudioRender::getPcmData() {
     mOutSize = 0;
-    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
-        if (mPlayer->mStatus->isSeek) {
+        if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -50,15 +50,15 @@ int AudioRender::getPcmData() {
         if (mQueue && mQueue->getQueueSize() == 0)//加载中
         {
 
-            if (!mPlayer->mStatus->isLoad) {
-                mPlayer->mStatus->isLoad = true;
+            if (!mPlayer->getStatus()->isLoad) {
+                mPlayer->getStatus()->isLoad = true;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING);
             }
             av_usleep(1000 * 100);
             continue;
         } else {
-            if (mPlayer->mStatus->isLoad) {
-                mPlayer->mStatus->isLoad = false;
+            if (mPlayer->getStatus()->isLoad) {
+                mPlayer->getStatus()->isLoad = false;
                 mPlayer->sendMsg(false, ACTION_PLAY_LOADING_OVER);
             }
         }
@@ -67,9 +67,9 @@ int AudioRender::getPcmData() {
         int ret = mQueue->getFrame(frame);
         if (ret == 0) {
 
-            if (mPlayer->mStatus && mPlayer->mStatus->isSeek) {
+            if (mPlayer->getStatus() && mPlayer->getStatus()->isSeek) {
                 double frame_time = frame->pts * av_q2d(mTimebase);
-                if (fabs(mPlayer->mStatus->mSeekSec - frame_time) > 0.01) {
+                if (fabs(mPlayer->getStatus()->mSeekSec - frame_time) > 0.01) {
                     av_frame_free(&frame);
                     av_free(frame);
                     frame = NULL;
@@ -88,7 +88,7 @@ int AudioRender::getPcmData() {
                                  (const uint8_t **) frame->data, frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            if (!mPlayer->mStatus->isSeek) {
+            if (!mPlayer->getStatus()->isSeek) {
                 mPlayer->mClock = frame->pts * av_q2d(mTimebase);
             }
             av_frame_free(&frame);
@@ -113,7 +113,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
             render.mPlayer->mClock += bufferSize / ((double) SAMPLE_SIZE);
             double diff = render.mPlayer->mClock - render.mPlayer->mDuration;
             if (diff > -0.01 && diff < 0.01) {
-                render.mPlayer->mStatus->isPlayEnd = true;
+                render.mPlayer->getStatus()->isPlayEnd = true;
             }
             render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->mClock);
             SLresult result = (*render.mBufferQueue)->Enqueue(render.mBufferQueue,
@@ -122,7 +122,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
             if (result != SL_RESULT_SUCCESS) {
                 LOGE("音频渲染出错\n");
             }
-            if (render.mPlayer->mStatus->isPlayEnd) {
+            if (render.mPlayer->getStatus()->isPlayEnd) {
                 render.mPlayer->sendMsg(false, ACTION_PLAY_FINISH);
             }
         }

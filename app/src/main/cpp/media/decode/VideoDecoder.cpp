@@ -20,13 +20,13 @@ void VideoDecoder::decode() {
     AVFrame *frame = NULL;
     int ret = 0;
 
-    while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit) {
-        if (mPlayer->mStatus->isSeek) {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
+        if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 100);
             continue;
         }
 
-        if (mPlayer->mStatus->isPause) {
+        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 100);
             continue;
         }
@@ -48,15 +48,15 @@ void VideoDecoder::decode() {
 
         if (ret == 0) {
 
-            while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit &&
+            while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
                    mPlayer->getVideoRender()->isQueueFull()) {
                 av_usleep(1000 * 5);
             }
-            if (mPlayer->mStatus == NULL || mPlayer->mStatus->isExit) {
+            if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
                 av_frame_free(&frame);
                 continue;
             }
-            if (mPlayer->getVideoRender() && !mPlayer->mStatus->isSeek) {
+            if (mPlayer->getVideoRender() && !mPlayer->getStatus()->isSeek) {
                 mPlayer->getVideoRender()->putFrame(frame);
             } else {
                 av_frame_free(&frame);
