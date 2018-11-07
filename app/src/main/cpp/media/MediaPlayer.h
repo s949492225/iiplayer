@@ -19,6 +19,7 @@
 class MediaPlayer {
 private:
     const char *mUrl = NULL;
+    CallJava *mCallJava = NULL;
     PacketReader *mReader = NULL;
     BaseDecoder *mAudioDecoder = NULL;
     BaseDecoder *mVideoDecoder = NULL;
@@ -28,25 +29,6 @@ private:
     void notifyWait();
 
 public:
-
-    BaseDecoder *getAudioDecoder();
-
-    BaseDecoder *getVideoDecoder();
-
-    AudioRender *getAudioRender();
-
-    VideoRender *getVideoRender();
-
-    void setVideoDecoder(BaseDecoder *decoder);
-
-    void setAudioDecoder(BaseDecoder *decoder);
-
-    void setAudioRender(AudioRender *render);
-
-    void setVideoRender(VideoRender *render);
-
-
-public:
     Status *mStatus = NULL;
     double mClock = 0;
     double mDuration = 0;
@@ -54,9 +36,7 @@ public:
     int mWidth = 0;
     int mHeight = 0;
     bool isOnlySoft = false;
-    CallJava *mCallJava = NULL;
     LifeSequenceHolder *mHolder = NULL;
-
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj);
 
@@ -77,13 +57,30 @@ public:
     void sendMsg(bool isMain, int type);
 
     void sendMsg(bool isMain, int type, int data);
+public:
 
+    BaseDecoder *getAudioDecoder();
+
+    BaseDecoder *getVideoDecoder();
+
+    AudioRender *getAudioRender();
+
+    VideoRender *getVideoRender();
+
+    void setVideoDecoder(BaseDecoder *decoder);
+
+    void setAudioDecoder(BaseDecoder *decoder);
+
+    void setAudioRender(AudioRender *render);
+
+    void setVideoRender(VideoRender *render);
+
+    void setCallJava(CallJava * callJava);
     CallJava *getCallJava();
 
     jstring getInfo(char *string);
 
     const char *getUrl();
-
 };
 
 

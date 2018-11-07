@@ -17,7 +17,7 @@ void MediaPlayer::open(const char *url) {
     }
     mUrl = url;
     mStatus = new Status();
-    isOnlySoft = mCallJava->isSoftOnly(true);
+    isOnlySoft = getCallJava()->isSoftOnly(true);
     mReader = new PacketReader(this);
 }
 
@@ -154,7 +154,7 @@ void MediaPlayer::release(bool isMain) {
     ii_deletep(&mVideoDecoder);
     ii_deletep(&mAudioRender);
     ii_deletep(&mVideoRender);
-    mCallJava->releaseMediaCodec(isMain);
+    getCallJava()->releaseMediaCodec(isMain);
     ii_deletep(&mStatus);
     ii_deletep(&mHolder);
     ii_deletep(&mCallJava);
@@ -180,12 +180,16 @@ void MediaPlayer::setAudioDecoder(BaseDecoder *decoder) {
     mAudioDecoder = decoder;
 }
 
-BaseDecoder *MediaPlayer::getVideoDecoder()  {
+BaseDecoder *MediaPlayer::getVideoDecoder() {
     return mVideoDecoder;
 }
 
 void MediaPlayer::setVideoDecoder(BaseDecoder *decoder) {
     mVideoDecoder = decoder;
+}
+
+void MediaPlayer::setCallJava(CallJava *callJava) {
+    mCallJava = callJava;
 }
 
 

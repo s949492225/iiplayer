@@ -102,11 +102,11 @@ int PacketReader::prepare() {
     mPlayer->setAudioRender(new AudioRender(mPlayer));
 
     if (isHardCodec()) {
-        mPlayer->mCallJava->setCodecType(DECODE_HARD);
+        mPlayer->getCallJava()->setCodecType(DECODE_HARD);
         mPlayer->setVideoDecoder(new HardVideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
     } else {
-        mPlayer->mCallJava->setCodecType(DECODE_SOFT);
+        mPlayer->getCallJava()->setCodecType(DECODE_SOFT);
         mPlayer->setVideoDecoder(new VideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
         mPlayer->setVideoRender(new VideoRender(mPlayer));
@@ -211,7 +211,7 @@ void PacketReader::read() {
 void PacketReader::initBitStreamFilter() {
     const AVBitStreamFilter *filter = NULL;
     const char *codecName = mPlayer->mHolder->mVideoCodecCtx->codec->name;
-    if (mPlayer->mCallJava->isSupportHard(false, codecName)) {
+    if (mPlayer->getCallJava()->isSupportHard(false, codecName)) {
         if (strcasecmp(codecName, "h264") == 0) {
             filter = av_bsf_get_by_name("h264_mp4toannexb");
         } else if (strcasecmp(codecName, "h265") == 0) {
@@ -267,7 +267,7 @@ void PacketReader::handlerSeek() {
 
 void PacketReader::checkBuffer(AVPacket *packet) {
     double cachedTime = packet->pts * av_q2d(mPlayer->getAudioRender()->mTimebase);
-    mPlayer->mCallJava->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
+    mPlayer->getCallJava()->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
 
 /**

@@ -10,7 +10,7 @@ HardVideoDecoder::HardVideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 }
 
 void HardVideoDecoder::init() {
-    int code = mPlayer->mCallJava->initMediaCodec(false,
+    int code = mPlayer->getCallJava()->initMediaCodec(false,
                                                   const_cast<char *>(mPlayer->mHolder->mVideoCodecCtx->codec->name),
                                                   mPlayer->mWidth,
                                                   mPlayer->mHeight,
@@ -67,7 +67,7 @@ void HardVideoDecoder::decode() {
             }
         }
 
-        mPlayer->mCallJava->decodeAVPacket(false, packet->size, packet->data);
+        mPlayer->getCallJava()->decodeAVPacket(false, packet->size, packet->data);
 
         av_packet_free(&packet);
 
