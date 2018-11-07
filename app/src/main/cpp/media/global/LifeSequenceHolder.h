@@ -24,6 +24,8 @@ public:
     int mVideoStreamIndex = -1;
     pthread_cond_t mCondRead;
     ~LifeSequenceHolder();
+
+    AVRational getAudioTimeBase();
 };
 
 

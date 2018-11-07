@@ -24,6 +24,10 @@ class MediaPlayer;
 
 class AudioRender {
 private:
+
+    MediaPlayer *mPlayer = NULL;
+    AVRational mTimebase;
+
     int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
@@ -63,9 +67,6 @@ private:
     void friend renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *data);
 
 public:
-    MediaPlayer *mPlayer = NULL;
-    AVRational mTimebase;
-
     AudioRender(MediaPlayer *status);
 
     ~AudioRender();

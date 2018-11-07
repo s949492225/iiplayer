@@ -9,7 +9,7 @@ LifeSequenceHolder::~LifeSequenceHolder() {
 
     pthread_cond_destroy(&mCondRead);
 
-    if (mVideoCodecParam!=NULL) {
+    if (mVideoCodecParam != NULL) {
         avcodec_parameters_free(&mVideoCodecParam);
     }
 
@@ -34,4 +34,8 @@ LifeSequenceHolder::~LifeSequenceHolder() {
     }
 
     avformat_network_deinit();
+}
+
+AVRational LifeSequenceHolder::getAudioTimeBase() {
+    return mFormatCtx->streams[mAudioStreamIndex]->time_base;
 }

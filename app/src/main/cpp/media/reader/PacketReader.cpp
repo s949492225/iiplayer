@@ -268,7 +268,7 @@ void PacketReader::handlerSeek() {
 }
 
 void PacketReader::checkBuffer(AVPacket *packet) {
-    double cachedTime = packet->pts * av_q2d(mPlayer->getAudioRender()->mTimebase);
+    double cachedTime = packet->pts * av_q2d(mPlayer->getHolder()->getAudioTimeBase());
     mPlayer->getCallJava()->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
 

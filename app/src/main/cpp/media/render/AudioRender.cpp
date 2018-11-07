@@ -9,7 +9,7 @@ AudioRender::AudioRender(MediaPlayer *player) {
     mPlayer = player;
     this->duration = mPlayer->getHolder()->mFormatCtx->duration;
     mSampleRate = mPlayer->getHolder()->mAudioCodecCtx->sample_rate;
-    mTimebase = mPlayer->getHolder()->mFormatCtx->streams[mPlayer->getHolder()->mAudioStreamIndex]->time_base;
+    mTimebase = mPlayer->getHolder()->getAudioTimeBase();
     mQueue = new FrameQueue(mPlayer->getStatus(), const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
