@@ -4,11 +4,9 @@
 
 #include "PacketReader.h"
 #include "../MediaPlayer.h"
-#include "../decode/AudioDecoder.h"
+#include "../decode/Decoder.h"
 #include "../render/AudioRender.h"
-#include "../decode/VideoDecoder.h"
 #include "../render/VideoRender.h"
-#include "../decode/HardVideoDecoder.h"
 #include <unistd.h>
 
 #define MAX_QUEUE_SIZE (1024*1024)
@@ -99,19 +97,19 @@ int PacketReader::prepare() {
 
     mPlayer->sendMsg(false, ACTION_PLAY_PREPARED);
 
-    mPlayer->mAudioDecoder = new AudioDecoder(mPlayer);
-    mPlayer->mAudioDecoder->init();
-    mPlayer->mAudioRender = new AudioRender(mPlayer);
+    mPlayer->setAudioDecoder(new AudioDecoder(mPlayer));
+    mPlayer->getAudioDecoder()->init();
+    mPlayer->setAudioRender(new AudioRender(mPlayer));
 
     if (isHardCodec()) {
         mPlayer->mCallJava->setCodecType(DECODE_HARD);
-        mPlayer->mVideoDecoder = new HardVideoDecoder(mPlayer);
-        mPlayer->mVideoDecoder->init();
+        mPlayer->setVideoDecoder(new HardVideoDecoder(mPlayer));
+        mPlayer->getVideoDecoder()->init();
     } else {
         mPlayer->mCallJava->setCodecType(DECODE_SOFT);
-        mPlayer->mVideoDecoder = new VideoDecoder(mPlayer);
-        mPlayer->mVideoRender = new VideoRender(mPlayer);
-        mPlayer->mVideoDecoder->init();
+        mPlayer->setVideoDecoder(new VideoDecoder(mPlayer));
+        mPlayer->getVideoDecoder()->init();
+        mPlayer->setVideoRender(new VideoRender(mPlayer));
     }
     return 0;
 }
@@ -128,7 +126,8 @@ void PacketReader::read() {
     if (error_code < 0) {
         return;
     }
-
+    BaseDecoder *audioDecoder = mPlayer->getAudioDecoder();
+    BaseDecoder *videoDecoder = mPlayer->getVideoDecoder();
     //read packet
     while (mPlayer->mStatus != NULL && !mPlayer->mStatus->isExit && !mPlayer->mStatus->isPlayEnd) {
 
@@ -148,11 +147,11 @@ void PacketReader::read() {
             continue;
         }
         bool isSizeOver =
-                mPlayer->mVideoDecoder->getQueueSize() +
-                mPlayer->mAudioDecoder->getQueueSize() >
+                videoDecoder->getQueueSize() +
+                audioDecoder->getQueueSize() >
                 MAX_QUEUE_SIZE;
-        bool isAudioNeed = mPlayer->mAudioDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
-        bool isVideoNeed = mPlayer->mVideoDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isAudioNeed = audioDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
+        bool isVideoNeed = videoDecoder->getQueueSize() > MAX_QUEUE_SIZE / 2;
         if (isSizeOver & isAudioNeed & isVideoNeed) {
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mPlayer->mHolder->mCondRead, &mMutexRead, 10);
@@ -177,16 +176,16 @@ void PacketReader::read() {
                             AVPacket *newPacket = av_packet_alloc();
                             recSuccess = av_bsf_receive_packet(mPlayer->mHolder->mAbsCtx,
                                                                newPacket);
-                            mPlayer->mVideoDecoder->putPacket(newPacket);
+                            videoDecoder->putPacket(newPacket);
                         }
                         av_packet_free(&packet);
                     }
                 } else {
-                    mPlayer->mVideoDecoder->putPacket(packet);
+                    videoDecoder->putPacket(packet);
                 }
 
             } else if (packet->stream_index == mPlayer->mHolder->mAudioStreamIndex) {
-                mPlayer->mAudioDecoder->putPacket(packet);
+                audioDecoder->putPacket(packet);
                 checkBuffer(packet);
             } else {
                 av_packet_free(&packet);
@@ -250,12 +249,12 @@ void PacketReader::handlerSeek() {
                                  AVSEEK_FLAG_BACKWARD);
     if (ret == 0) {
         //clear
-        mPlayer->mAudioDecoder->clearQueue();
-        mPlayer->mVideoDecoder->clearQueue();
+        mPlayer->getAudioDecoder()->clearQueue();
+        mPlayer->getVideoDecoder()->clearQueue();
 
-        mPlayer->mAudioRender->clearQueue();
-        if (mPlayer->mVideoRender) {
-            mPlayer->mVideoRender->clearQueue();
+        mPlayer->getAudioRender()->clearQueue();
+        if (mPlayer->getVideoRender()) {
+            mPlayer->getVideoRender()->clearQueue();
         }
         mPlayer->mClock = mPlayer->mStatus->mSeekSec;
     } else {
@@ -267,7 +266,7 @@ void PacketReader::handlerSeek() {
 }
 
 void PacketReader::checkBuffer(AVPacket *packet) {
-    double cachedTime = packet->pts * av_q2d(mPlayer->mAudioRender->mTimebase);
+    double cachedTime = packet->pts * av_q2d(mPlayer->getAudioRender()->mTimebase);
     mPlayer->mCallJava->sendMsg(false, DATA_BUFFER_TIME, static_cast<int>(cachedTime));
 }
 
@@ -320,6 +319,6 @@ void PacketReader::seek(int sec) {
 
 void PacketReader::notifyWait() {
     pthread_cond_signal(&mPlayer->mHolder->mCondRead);
-    mPlayer->mAudioDecoder->notifyWait();
-    mPlayer->mVideoDecoder->notifyWait();
+    mPlayer->getAudioDecoder()->notifyWait();
+    mPlayer->getVideoDecoder()->notifyWait();
 }

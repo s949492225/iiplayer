@@ -2,8 +2,9 @@
 // Created by 宋林涛 on 2018/11/5.
 //
 
-#include "VideoDecoder.h"
+#include "Decoder.h"
 #include "../MediaPlayer.h"
+
 VideoDecoder::VideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 }
 

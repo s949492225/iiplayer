@@ -14,14 +14,37 @@
 #include "../android/CallJava.h"
 #include "reader/PacketReader.h"
 #include "global/LifeSequenceHolder.h"
-#include "decode/BaseDecoder.h"
+#include "decode/Decoder.h"
 
 class MediaPlayer {
 private:
     const char *mUrl = NULL;
     PacketReader *mReader = NULL;
+    BaseDecoder *mAudioDecoder = NULL;
+    BaseDecoder *mVideoDecoder = NULL;
+    AudioRender *mAudioRender = NULL;
+    VideoRender *mVideoRender = NULL;
 
     void notifyWait();
+
+public:
+
+    BaseDecoder *getAudioDecoder();
+
+    BaseDecoder *getVideoDecoder();
+
+    AudioRender *getAudioRender();
+
+    VideoRender *getVideoRender();
+
+    void setVideoDecoder(BaseDecoder *decoder);
+
+    void setAudioDecoder(BaseDecoder *decoder);
+
+    void setAudioRender(AudioRender *render);
+
+    void setVideoRender(VideoRender *render);
+
 
 public:
     Status *mStatus = NULL;
@@ -34,11 +57,6 @@ public:
     CallJava *mCallJava = NULL;
     LifeSequenceHolder *mHolder = NULL;
 
-    BaseDecoder *mAudioDecoder = NULL;
-    BaseDecoder *mVideoDecoder = NULL;
-
-    AudioRender *mAudioRender = NULL;
-    VideoRender *mVideoRender = NULL;
 
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj);
 
@@ -64,11 +82,8 @@ public:
 
     jstring getInfo(char *string);
 
-    AudioRender *getAudioRender();
-
-    VideoRender *getVideoRender();
-
     const char *getUrl();
+
 };
 
 

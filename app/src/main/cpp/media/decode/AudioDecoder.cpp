@@ -2,7 +2,7 @@
 // Created by 宋林涛 on 2018/11/5.
 //
 
-#include "AudioDecoder.h"
+#include "Decoder.h"
 #include "../MediaPlayer.h"
 
 AudioDecoder::AudioDecoder(MediaPlayer *player) : BaseDecoder(player) {

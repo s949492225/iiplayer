@@ -2,9 +2,8 @@
 // Created by 宋林涛 on 2018/11/6.
 //
 
-#include "HardVideoDecoder.h"
+#include "Decoder.h"
 #include "../MediaPlayer.h"
-#include <cstdlib>
 
 HardVideoDecoder::HardVideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 

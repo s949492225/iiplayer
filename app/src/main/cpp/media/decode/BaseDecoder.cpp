@@ -2,7 +2,7 @@
 // Created by 宋林涛 on 2018/11/6.
 //
 
-#include "BaseDecoder.h"
+#include "Decoder.h"
 #include "../MediaPlayer.h"
 
 BaseDecoder::BaseDecoder(MediaPlayer *player) {

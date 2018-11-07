@@ -2,12 +2,11 @@
 // Created by 宋林涛 on 2018/11/6.
 //
 
-#ifndef IIPLAYER_BASEDECODER_H
-#define IIPLAYER_BASEDECODER_H
+#pragma once
 
 #include <thread>
 #include "../global/Status.h"
-
+#include <cstdlib>
 extern "C" {
 #include "libavutil/time.h"
 #include "libavcodec/avcodec.h"
@@ -37,5 +36,31 @@ public:
     virtual void init() = 0;
 };
 
+class AudioDecoder:public BaseDecoder {
+private:
+    void init();
+    void decode();
 
-#endif //IIPLAYER_BASEDECODER_H
+public:
+    AudioDecoder(MediaPlayer *player);
+};
+
+class HardVideoDecoder :public BaseDecoder{
+private:
+    void init();
+    void decode();
+    double getPacketDiffTime(AVPacket *packet);
+public:
+    HardVideoDecoder(MediaPlayer *player);
+
+};
+class VideoDecoder : public BaseDecoder {
+private:
+    void init();
+
+    void decode();
+
+public:
+    VideoDecoder(MediaPlayer *player);
+};
+

@@ -164,5 +164,29 @@ void MediaPlayer::release(bool isMain) {
     }
 }
 
+void MediaPlayer::setAudioRender(AudioRender *render) {
+    mAudioRender = render;
+}
+
+void MediaPlayer::setVideoRender(VideoRender *render) {
+    mVideoRender = render;
+}
+
+BaseDecoder *MediaPlayer::getAudioDecoder() {
+    return mAudioDecoder;
+}
+
+void MediaPlayer::setAudioDecoder(BaseDecoder *decoder) {
+    mAudioDecoder = decoder;
+}
+
+BaseDecoder *MediaPlayer::getVideoDecoder()  {
+    return mVideoDecoder;
+}
+
+void MediaPlayer::setVideoDecoder(BaseDecoder *decoder) {
+    mVideoDecoder = decoder;
+}
+
 
 
