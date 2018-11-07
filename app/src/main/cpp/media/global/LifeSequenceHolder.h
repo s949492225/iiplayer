@@ -26,6 +26,7 @@ public:
     ~LifeSequenceHolder();
 
     AVRational getAudioTimeBase();
+    AVRational getVideoTimeBase();
 };
 
 

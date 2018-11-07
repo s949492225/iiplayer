@@ -39,3 +39,7 @@ LifeSequenceHolder::~LifeSequenceHolder() {
 AVRational LifeSequenceHolder::getAudioTimeBase() {
     return mFormatCtx->streams[mAudioStreamIndex]->time_base;
 }
+
+AVRational LifeSequenceHolder::getVideoTimeBase() {
+    return mFormatCtx->streams[mVideoStreamIndex]->time_base;
+}

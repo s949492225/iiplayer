@@ -22,12 +22,8 @@ extern "C" {
 class MediaPlayer;
 
 class VideoRender {
-public:
 
-    VideoRender(MediaPlayer *player);
-
-    ~VideoRender();
-
+private:
     MediaPlayer *mPlayer = NULL;
     AVPixelFormat mPixFmt;
     int mWidth = 0;
@@ -36,6 +32,14 @@ public:
     int mMaxQueueSize = 40;
     AVRational mTimebase;
     std::thread *mPlayThread = NULL;
+
+    double getFrameDiffTime(AVFrame *avFrame);
+
+public:
+
+    VideoRender(MediaPlayer *player);
+
+    ~VideoRender();
 
     void putFrame(AVFrame *frame);
 
@@ -48,9 +52,6 @@ public:
     void clearQueue();
 
     void notifyWait();
-
-    double getFrameDiffTime(AVFrame *avFrame);
-
 };
 
 
