@@ -6,6 +6,7 @@ import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.Message;
 import android.view.Surface;
+
 import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnErrorListener;
 import com.syiyi.player.listener.OnPrepareListener;
@@ -13,6 +14,7 @@ import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.listener.OnSeekCompleteListener;
 import com.syiyi.player.opengl.IIGlSurfaceView;
 import com.syiyi.player.opengl.OnGlSurfaceViewCreateListener;
+
 import java.nio.ByteBuffer;
 
 
@@ -44,6 +46,7 @@ public class IIMediaPlayer {
         static final int ERROR_OPEN_HARD_CODEC = -6;
         static final int ERROR_SURFACE_NULL = -7;
         static final int ERROR_JNI = -8;
+        static final int ERROR_PREPARE_FIAL = -9;
         static final int DATA_DURATION = 100;
         static final int DATA_NOW_PLAYING_TIME = 101;
         static final int DATA_BUFFER_TIME = 102;
@@ -77,6 +80,7 @@ public class IIMediaPlayer {
                 case Code.ERROR_OPEN_HARD_CODEC:
                 case Code.ERROR_SURFACE_NULL:
                 case Code.ERROR_JNI:
+                case Code.ERROR_PREPARE_FIAL:
                     mPlayer.onError(msg.arg1);
                     break;
                 case Code.ACTION_PLAY_PREPARED:
@@ -247,13 +251,13 @@ public class IIMediaPlayer {
     }
 
     private void onBufferTimeUpdate(int current) {
-        if (mBufferTimeListener!=null) {
+        if (mBufferTimeListener != null) {
             mBufferTimeListener.onBufferTime(new TimeInfo(current, mDuration));
         }
     }
 
     private void onPlayTimeUpdate(int current) {
-        if(mPlayTimeListener!=null) {
+        if (mPlayTimeListener != null) {
             mPlayTimeListener.onPlayTime(new TimeInfo(current, mDuration));
         }
 

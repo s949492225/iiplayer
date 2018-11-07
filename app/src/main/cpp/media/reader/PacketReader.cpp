@@ -124,6 +124,7 @@ void PacketReader::read() {
     }
     int error_code = prepare();
     if (error_code < 0) {
+        mPlayer->sendMsg(false, ERROR_PREPARE_FIAL);
         return;
     }
     BaseDecoder *audioDecoder = mPlayer->getAudioDecoder();

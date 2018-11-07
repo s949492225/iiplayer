@@ -77,6 +77,7 @@ void MediaPlayer::sendMsg(bool isMain, int type, int data) {
         case ERROR_OPEN_HARD_CODEC:
         case ERROR_SURFACE_NULL:
         case ERROR_JNI:
+        case ERROR_PREPARE_FIAL:
             release(false);
             break;
         case ACTION_PLAY_FINISH:
