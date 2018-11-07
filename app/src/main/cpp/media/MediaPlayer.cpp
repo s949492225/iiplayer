@@ -192,5 +192,9 @@ void MediaPlayer::setCallJava(CallJava *callJava) {
     mCallJava = callJava;
 }
 
+LifeSequenceHolder *MediaPlayer::getHolder() {
+    return mHolder;
+}
+
 
 

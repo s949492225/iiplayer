@@ -39,14 +39,14 @@ void AudioDecoder::decode() {
             continue;
         }
 
-        ret = avcodec_send_packet(mPlayer->mHolder->mAudioCodecCtx, packet);
+        ret = avcodec_send_packet(mPlayer->getHolder()->mAudioCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
             continue;
         }
 
         frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mPlayer->mHolder->mAudioCodecCtx, frame);
+        ret = avcodec_receive_frame(mPlayer->getHolder()->mAudioCodecCtx, frame);
         if (ret == 0) {
 
             if (frame->channels && frame->channel_layout == 0) {

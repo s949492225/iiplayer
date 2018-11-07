@@ -7,10 +7,10 @@
 
 VideoRender::VideoRender(MediaPlayer *player) {
     mPlayer = player;
-    mPixFmt = mPlayer->mHolder->mVideoCodecCtx->pix_fmt;
-    mWidth = mPlayer->mHolder->mVideoCodecCtx->width;
-    mHeight = mPlayer->mHolder->mVideoCodecCtx->height;
-    mTimebase = mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mVideoStreamIndex]->time_base;
+    mPixFmt = mPlayer->getHolder()->mVideoCodecCtx->pix_fmt;
+    mWidth = mPlayer->getHolder()->mVideoCodecCtx->width;
+    mHeight = mPlayer->getHolder()->mVideoCodecCtx->height;
+    mTimebase = mPlayer->getHolder()->mFormatCtx->streams[mPlayer->getHolder()->mVideoStreamIndex]->time_base;
     mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("video"));
 
 }

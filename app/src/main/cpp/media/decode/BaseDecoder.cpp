@@ -7,7 +7,7 @@
 
 BaseDecoder::BaseDecoder(MediaPlayer *player) {
     mPlayer = player;
-    mQueue = new PacketQueue(mPlayer->mStatus, mPlayer->mHolder, const_cast<char *>("video"));
+    mQueue = new PacketQueue(mPlayer->mStatus, mPlayer->getHolder(), const_cast<char *>("video"));
 }
 
 void BaseDecoder::start() {

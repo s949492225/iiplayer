@@ -37,14 +37,14 @@ void VideoDecoder::decode() {
             continue;
         }
 
-        ret = avcodec_send_packet(mPlayer->mHolder->mVideoCodecCtx, packet);
+        ret = avcodec_send_packet(mPlayer->getHolder()->mVideoCodecCtx, packet);
         if (ret != 0) {
             av_packet_free(&packet);
             continue;
         }
 
         frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mPlayer->mHolder->mVideoCodecCtx, frame);
+        ret = avcodec_receive_frame(mPlayer->getHolder()->mVideoCodecCtx, frame);
 
         if (ret == 0) {
 

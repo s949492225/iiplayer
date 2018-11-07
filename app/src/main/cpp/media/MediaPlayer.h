@@ -57,6 +57,7 @@ public:
     void sendMsg(bool isMain, int type);
 
     void sendMsg(bool isMain, int type, int data);
+
 public:
 
     BaseDecoder *getAudioDecoder();
@@ -75,12 +76,15 @@ public:
 
     void setVideoRender(VideoRender *render);
 
-    void setCallJava(CallJava * callJava);
+    void setCallJava(CallJava *callJava);
+
     CallJava *getCallJava();
 
     jstring getInfo(char *string);
 
     const char *getUrl();
+
+    LifeSequenceHolder *getHolder();
 };
 
 

@@ -7,13 +7,13 @@
 
 AudioRender::AudioRender(MediaPlayer *player) {
     mPlayer = player;
-    this->duration = mPlayer->mHolder->mFormatCtx->duration;
-    mSampleRate = mPlayer->mHolder->mAudioCodecCtx->sample_rate;
-    mTimebase = mPlayer->mHolder->mFormatCtx->streams[mPlayer->mHolder->mAudioStreamIndex]->time_base;
+    this->duration = mPlayer->getHolder()->mFormatCtx->duration;
+    mSampleRate = mPlayer->getHolder()->mAudioCodecCtx->sample_rate;
+    mTimebase = mPlayer->getHolder()->mFormatCtx->streams[mPlayer->getHolder()->mAudioStreamIndex]->time_base;
     mQueue = new FrameQueue(mPlayer->mStatus, const_cast<char *>("audio"));
     mOutChannelNum = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
-    initSwrCtx(mPlayer->mHolder->mAudioCodecCtx);
+    initSwrCtx(mPlayer->getHolder()->mAudioCodecCtx);
 }
 
 void AudioRender::initSwrCtx(AVCodecContext *context) {
