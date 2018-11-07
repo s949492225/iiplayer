@@ -39,12 +39,12 @@ void HardVideoDecoder::decode() {
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         }
 
         if (mPlayer->getStatus()->isPause) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         }
 

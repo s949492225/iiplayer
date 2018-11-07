@@ -18,18 +18,18 @@ void AudioDecoder::decode() {
         LOGD("音频解码线程开始,tid:%i\n", gettid())
     }
     AVPacket *packet = NULL;
-    AVFrame *frame = NULL;
     int ret = 0;
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
         if (mPlayer->getStatus()->isSeek) {
-            av_usleep(1000 * 100);
+            avcodec_flush_buffers(mPlayer->getHolder()->mAudioCodecCtx);
+            av_usleep(1000 * 10);
             continue;
         }
 
         if (mPlayer->getStatus()->isPause) {
-            av_usleep(1000 * 100);
+            av_usleep(1000 * 10);
             continue;
         }
 
@@ -45,35 +45,36 @@ void AudioDecoder::decode() {
             continue;
         }
 
-        frame = av_frame_alloc();
-        ret = avcodec_receive_frame(mPlayer->getHolder()->mAudioCodecCtx, frame);
-        if (ret == 0) {
+        while (ret >= 0) {
+            AVFrame *frame = av_frame_alloc();
+            ret = avcodec_receive_frame(mPlayer->getHolder()->mAudioCodecCtx, frame);
+            if (ret >= 0) {
 
-            if (frame->channels && frame->channel_layout == 0) {
-                frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
-                        frame->channels));
-            } else if (frame->channels == 0 && frame->channel_layout > 0) {
-                frame->channels = av_get_channel_layout_nb_channels(
-                        frame->channel_layout);
-            }
-            while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
-                   mPlayer->getAudioRender()->isQueueFull()) {
-                av_usleep(1000 * 5);
-            }
-            if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
-                av_frame_free(&frame);
-                continue;
-            }
-            if (mPlayer->getAudioRender() && !mPlayer->getStatus()->isSeek) {
-                mPlayer->getAudioRender()->putFrame(frame);
+                if (frame->channels && frame->channel_layout == 0) {
+                    frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
+                            frame->channels));
+                } else if (frame->channels == 0 && frame->channel_layout > 0) {
+                    frame->channels = av_get_channel_layout_nb_channels(
+                            frame->channel_layout);
+                }
+                while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
+                       mPlayer->getAudioRender()->isQueueFull()) {
+                    av_usleep(1000 * 5);
+                }
+                if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
+                    av_frame_free(&frame);
+                    break;
+                }
+                if (mPlayer->getAudioRender() && !mPlayer->getStatus()->isSeek) {
+                    mPlayer->getAudioRender()->putFrame(frame);
+                } else {
+                    av_frame_free(&frame);
+                }
             } else {
                 av_frame_free(&frame);
             }
-            av_packet_free(&packet);
-        } else {
-            av_frame_free(&frame);
-            av_packet_free(&packet);
         }
+        av_packet_free(&packet);
     }
 }
 
