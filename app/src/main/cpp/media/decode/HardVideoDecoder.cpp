@@ -12,8 +12,8 @@ HardVideoDecoder::HardVideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 void HardVideoDecoder::init() {
     int code = mPlayer->getCallJava()->initMediaCodec(false,
                                                   const_cast<char *>(mPlayer->getHolder()->mVideoCodecCtx->codec->name),
-                                                  mPlayer->mWidth,
-                                                  mPlayer->mHeight,
+                                                  mPlayer->getWidth(),
+                                                  mPlayer->getHeight(),
                                                   mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
                                                   mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
                                                   mPlayer->getHolder()->mVideoCodecCtx->extradata,
@@ -86,7 +86,7 @@ double HardVideoDecoder::getPacketDiffTime(AVPacket *packet) {
         return 0;
     }
 
-    double diff = mPlayer->mClock - pts;
+    double diff = mPlayer->getClock() - pts;
     return diff;
 }
 

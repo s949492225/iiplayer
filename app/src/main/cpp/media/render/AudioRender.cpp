@@ -89,7 +89,7 @@ int AudioRender::getPcmData() {
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
             if (!mPlayer->getStatus()->isSeek) {
-                mPlayer->mClock = frame->pts * av_q2d(mTimebase);
+                mPlayer->setClock(frame->pts * av_q2d(mTimebase));
             }
             av_frame_free(&frame);
             av_free(frame);
@@ -110,12 +110,13 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
         AudioRender &render = *((AudioRender *) data);
         int bufferSize = render.getPcmData();
         if (bufferSize > 0) {
-            render.mPlayer->mClock += bufferSize / ((double) SAMPLE_SIZE);
-            double diff = render.mPlayer->mClock - render.mPlayer->mDuration;
+            render.mPlayer->setClock(
+                    render.mPlayer->getClock() + bufferSize / ((double) SAMPLE_SIZE));
+            double diff = render.mPlayer->getClock() - render.mPlayer->getDuration();
             if (diff > -0.01 && diff < 0.01) {
                 render.mPlayer->getStatus()->isPlayEnd = true;
             }
-            render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->mClock);
+            render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->getClock());
             SLresult result = (*render.mBufferQueue)->Enqueue(render.mBufferQueue,
                                                               (char *) render.mOutBuffer,
                                                               static_cast<SLuint32>(bufferSize));

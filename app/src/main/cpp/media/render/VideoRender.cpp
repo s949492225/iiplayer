@@ -156,7 +156,7 @@ double VideoRender::getFrameDiffTime(AVFrame *frame) {
         return 0;
     }
 
-    double diff = mPlayer->mClock - pts;
+    double diff = mPlayer->getClock() - pts;
     return diff;
 }
 

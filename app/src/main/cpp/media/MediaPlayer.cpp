@@ -196,5 +196,45 @@ Status *MediaPlayer::getStatus() {
     return mStatus;
 }
 
+bool MediaPlayer::isOnlySoftDecoder() {
+    return isOnlySoft;
+}
+
+void MediaPlayer::setWidth(int width) {
+    mWidth = width;
+}
+
+void MediaPlayer::setHeight(int height) {
+    mHeight = height;
+}
+
+int MediaPlayer::getWidth() {
+    return mWidth;
+}
+
+int MediaPlayer::getHeight() {
+    return mHeight;
+}
+
+void MediaPlayer::setRotation(int rotation) {
+    mRotation = rotation;
+}
+
+void MediaPlayer::setDuration(double duration) {
+    mDuration = duration;
+}
+
+double MediaPlayer::getDuration() {
+    return mDuration;
+}
+
+void MediaPlayer::setClock(double clock) {
+    mClock = clock;
+}
+
+double MediaPlayer::getClock() {
+    return mClock;
+}
+
 
 

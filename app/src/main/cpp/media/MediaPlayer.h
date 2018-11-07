@@ -18,6 +18,13 @@
 class MediaPlayer {
 private:
     const char *mUrl = NULL;
+    bool isOnlySoft = false;
+    int mWidth = 0;
+    int mHeight = 0;
+    int mRotation = 0;
+    double mDuration = 0;
+    double mClock = 0;
+private:
     CallJava *mCallJava = NULL;
     LifeSequenceHolder *mHolder = NULL;
     Status *mStatus = NULL;
@@ -30,13 +37,6 @@ private:
     void notifyWait();
 
 public:
-    double mClock = 0;
-    double mDuration = 0;
-    int mRotation = 0;
-    int mWidth = 0;
-    int mHeight = 0;
-    bool isOnlySoft = false;
-
     MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj);
 
     void open(const char *string);
@@ -60,7 +60,6 @@ public:
     Status *getStatus();
 
 public:
-
     BaseDecoder *getAudioDecoder();
 
     BaseDecoder *getVideoDecoder();
@@ -84,5 +83,25 @@ public:
     const char *getUrl();
 
     LifeSequenceHolder *getHolder();
+
+    bool isOnlySoftDecoder();
+
+    void setWidth(int width);
+
+    void setHeight(int height);
+
+    int getWidth();
+
+    int getHeight();
+
+    void setRotation(int rotation);
+
+    void setDuration(double duration);
+
+    double getDuration();
+
+    void setClock(double clock);
+
+    double getClock();
 
 };

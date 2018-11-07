@@ -73,8 +73,8 @@ int PacketReader::prepare() {
                     return -1;
                 }
                 mPlayer->getHolder()->mAudioStreamIndex = i;
-                mPlayer->mDuration = mPlayer->getHolder()->mFormatCtx->duration / AV_TIME_BASE;
-                mPlayer->sendMsg(false, DATA_DURATION, static_cast<int>(mPlayer->mDuration));
+                mPlayer->setDuration(mPlayer->getHolder()->mFormatCtx->duration / AV_TIME_BASE);
+                mPlayer->sendMsg(false, DATA_DURATION, static_cast<int>(mPlayer->getDuration()));
             }
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (i != -1) {
@@ -82,7 +82,7 @@ int PacketReader::prepare() {
                 int ret = get_codec_context(parameters, &mPlayer->getHolder()->mVideoCodecCtx);
                 if (ret < 0) {
                     mPlayer->sendMsg(false, ERROR_VIDEO_DECODEC_EXCEPTION,
-                                     static_cast<int>(mPlayer->mDuration));
+                                     static_cast<int>(mPlayer->getDuration()));
                     return -1;
                 }
                 mPlayer->getHolder()->mVideoStreamIndex = i;
@@ -115,7 +115,7 @@ int PacketReader::prepare() {
 }
 
 bool PacketReader::isHardCodec() const {
-    return !mPlayer->isOnlySoft && mPlayer->getHolder()->mAbsCtx != NULL;
+    return !mPlayer->isOnlySoftDecoder() && mPlayer->getHolder()->mAbsCtx != NULL;
 }
 
 void PacketReader::read() {
@@ -201,7 +201,7 @@ void PacketReader::read() {
             if (mPlayer->getHolder()->mFormatCtx->pb &&
                 mPlayer->getHolder()->mFormatCtx->pb->error) {
                 mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
-                seekErrorPos(static_cast<int>(mPlayer->mClock));
+                seekErrorPos(static_cast<int>(mPlayer->getClock()));
             }
             pthread_mutex_lock(&mMutexRead);
             thread_wait(&mPlayer->getHolder()->mCondRead, &mMutexRead, 10);
@@ -258,7 +258,7 @@ void PacketReader::handlerSeek() {
         if (mPlayer->getVideoRender()) {
             mPlayer->getVideoRender()->clearQueue();
         }
-        mPlayer->mClock = mPlayer->getStatus()->mSeekSec;
+        mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
     } else {
         LOGE("seek fail")
     }
@@ -279,8 +279,8 @@ void PacketReader::seekErrorPos(int sec) {
     int rel = 0;
     if (sec < 0)
         rel = 0;
-    if (rel > mPlayer->mDuration)
-        rel = static_cast<int>(mPlayer->mDuration);
+    if (rel > mPlayer->getDuration())
+        rel = static_cast<int>(mPlayer->getDuration());
     else
         rel = sec;
     mPlayer->getStatus()->mSeekSec = rel;
@@ -294,23 +294,23 @@ void PacketReader::setMediaInfo() {
             mPlayer->getHolder()->mFormatCtx->streams[mPlayer->getHolder()->mVideoStreamIndex]->metadata,
             "rotate", tag, 0);
     if (tag == NULL) {
-        mPlayer->mRotation = 0;
+        mPlayer->setRotation(0);
     } else {
         int angle = atoi(tag->value);
         angle %= 360;
-        mPlayer->mRotation = angle;
+        mPlayer->setRotation(angle);
     }
 
-    mPlayer->mWidth = mPlayer->getHolder()->mVideoCodecCtx->width;
-    mPlayer->mHeight = mPlayer->getHolder()->mVideoCodecCtx->height;
+    mPlayer->setWidth(mPlayer->getHolder()->mVideoCodecCtx->width);
+    mPlayer->setHeight(mPlayer->getHolder()->mVideoCodecCtx->height);
 }
 
 void PacketReader::seek(int sec) {
     int rel = 0;
     if (sec < 0)
         rel = 0;
-    if (rel > mPlayer->mDuration)
-        rel = static_cast<int>(mPlayer->mDuration);
+    if (rel > mPlayer->getDuration())
+        rel = static_cast<int>(mPlayer->getDuration());
     else
         rel = sec;
     mPlayer->getStatus()->mSeekSec = rel;
