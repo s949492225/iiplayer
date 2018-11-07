@@ -46,14 +46,8 @@ int PacketQueue::getPacket(AVPacket *packet) {
             }
             break;
         } else {
-            if (strcmp("video", mName) == 0) {
-                LOGE("SEEK, decode getPacket wait")
-            }
             pthread_cond_broadcast(&mHolder->mReadCond);
             pthread_cond_wait(&mCond, &mMutex);
-            if (strcmp("video", mName) == 0) {
-                LOGE("SEEK, decode getPacket wait over")
-            }
         }
     }
     pthread_mutex_unlock(&mMutex);

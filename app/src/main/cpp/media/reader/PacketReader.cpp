@@ -141,7 +141,7 @@ void PacketReader::read() {
         }
         //等音频的decoder 和 render清理干净后才可以开始seek,进度条依赖音频所以不管视频
         if (mPlayer->getStatus()->isSeek) {
-            while (true) {
+            while (!mPlayer->getStatus()->isExit) {
                 pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
                 if (mPlayer->getStatus()->mSeekReadyCount == 2) {
                     mPlayer->getStatus()->mSeekReadyCount = 0;
@@ -150,6 +150,7 @@ void PacketReader::read() {
                 }
                 audioDecoder->notifyWait();
                 videoDecoder->notifyWait();
+                mPlayer->getAudioRender()->notifyWait();
                 thread_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex,
                             10);
                 pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);

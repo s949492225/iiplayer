@@ -84,7 +84,6 @@ void MediaPlayer::sendMsg(bool isMain, int type, int data) {
             release(false);
             break;
         case ACTION_PLAY_FINISH:
-            release(false);
             break;
         default:
             break;

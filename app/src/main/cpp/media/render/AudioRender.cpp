@@ -41,13 +41,10 @@ void AudioRender::play() {
 int AudioRender::getPcmData() {
     mOutSize = 0;
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
-
         //为seek清理异常数据
         if (mPlayer->getStatus()->isSeek) {
-            LOGE("SEEK, render seek")
             pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
             mPlayer->getStatus()->mSeekReadyCount += 1;
-            LOGE("SEEK, render wait:%i", mPlayer->getStatus()->mSeekReadyCount)
             pthread_cond_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex);
             pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
             //clear
@@ -95,7 +92,6 @@ int AudioRender::getPcmData() {
             av_frame_free(&frame);
             av_free(frame);
             frame = NULL;
-            continue;
         }
     }
     return mOutSize;
@@ -109,7 +105,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
             render.mPlayer->setClock(
                     render.mPlayer->getClock() + bufferSize / ((double) SAMPLE_SIZE));
             double diff = render.mPlayer->getClock() - render.mPlayer->getDuration();
-            if (diff > -0.01 && diff < 0.01) {
+            if (diff > -0.05 && diff < 10 && render.mQueue->getQueueSize() == 0) {
                 render.mPlayer->getStatus()->isPlayEnd = true;
             }
             render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->getClock());
