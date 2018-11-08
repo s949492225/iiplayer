@@ -8,6 +8,7 @@
 #include "../render/AudioRender.h"
 #include "../render/VideoRender.h"
 #include <unistd.h>
+#include <bits/strcasecmp.h>
 
 #define MAX_QUEUE_SIZE (1024*1024)
 
@@ -123,15 +124,14 @@ void PacketReader::read() {
     }
     int error_code = prepare();
     if (error_code < 0) {
-        mPlayer->sendMsg(false, ERROR_PREPARE_FIAL);
         return;
     }
     BaseDecoder *audioDecoder = mPlayer->getAudioDecoder();
+    BaseDecoder *audioRender = mPlayer->getVideoDecoder();
     BaseDecoder *videoDecoder = mPlayer->getVideoDecoder();
     //read packet
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
            !mPlayer->getStatus()->isPlayEnd) {
-
         //文件读完了,但是还能够seek
         if (mPlayer->getStatus()->isEOF && !mPlayer->getStatus()->isSeek) {
             pthread_mutex_lock(&mReadMutex);
@@ -143,14 +143,17 @@ void PacketReader::read() {
         if (mPlayer->getStatus()->isSeek) {
             while (!mPlayer->getStatus()->isExit) {
                 pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
-                if (mPlayer->getStatus()->mSeekReadyCount == 2) {
+                if (mPlayer->getStatus()->mSeekReadyCount == 2 ||
+                    (mPlayer->getStatus()->isPause &&
+                     mPlayer->getStatus()->mSeekReadyCount == 1)) {
+
                     mPlayer->getStatus()->mSeekReadyCount = 0;
                     pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
                     break;
                 }
                 audioDecoder->notifyWait();
-                videoDecoder->notifyWait();
-                mPlayer->getAudioRender()->notifyWait();
+                audioRender->notifyWait();
+                mPlayer->getVideoDecoder()->notifyWait();
                 thread_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex,
                             10);
                 pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
@@ -160,11 +163,6 @@ void PacketReader::read() {
             }
             handlerSeek();
             pthread_cond_broadcast(&mPlayer->getHolder()->mSeekCond);
-        }
-
-        if (mPlayer->getStatus()->isPause) {
-            av_usleep(1000 * 10);
-            continue;
         }
 
         bool isSizeOver =
@@ -179,7 +177,6 @@ void PacketReader::read() {
             pthread_mutex_unlock(&mReadMutex);
             continue;
         }
-
         AVPacket *packet = av_packet_alloc();
         int ret;
         if ((ret = av_read_frame(mPlayer->getHolder()->mFormatCtx, packet)) == 0) {
@@ -274,6 +271,15 @@ void PacketReader::handlerSeek() {
     } else {
         LOGE("seek fail")
     }
+
+    mPlayer->getAudioDecoder()->clearQueue();
+    mPlayer->getAudioRender()->clearQueue();
+    mPlayer->getVideoDecoder()->clearQueue();
+    if (mPlayer->getVideoRender() != NULL) {
+        mPlayer->getVideoRender()->clearQueue();
+    }
+
+    mPlayer->getStatus()->needPauseRendCount = MAX_REND_COUNT;
     mPlayer->getStatus()->isEOF = false;
     mPlayer->getStatus()->isSeek = false;
     mPlayer->sendMsg(false, ACTION_PLAY_SEEK_OVER);

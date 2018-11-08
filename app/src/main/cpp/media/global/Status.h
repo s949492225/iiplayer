@@ -7,6 +7,8 @@
 
 #include "../queue/PacketQueue.h"
 
+#define MAX_REND_COUNT 1
+
 class Status {
 public:
     Status();
@@ -21,6 +23,7 @@ public:
     bool isEOF = false;
     int mSeekSec = 0;
     int mSeekReadyCount = 0;
+    int needPauseRendCount = 0;
 
 
 };

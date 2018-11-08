@@ -11,13 +11,13 @@ HardVideoDecoder::HardVideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 
 void HardVideoDecoder::init() {
     int code = mPlayer->getCallJava()->initMediaCodec(false,
-                                                  const_cast<char *>(mPlayer->getHolder()->mVideoCodecCtx->codec->name),
-                                                  mPlayer->getWidth(),
-                                                  mPlayer->getHeight(),
-                                                  mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
-                                                  mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
-                                                  mPlayer->getHolder()->mVideoCodecCtx->extradata,
-                                                  mPlayer->getHolder()->mVideoCodecCtx->extradata);
+                                                      const_cast<char *>(mPlayer->getHolder()->mVideoCodecCtx->codec->name),
+                                                      mPlayer->getWidth(),
+                                                      mPlayer->getHeight(),
+                                                      mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
+                                                      mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
+                                                      mPlayer->getHolder()->mVideoCodecCtx->extradata,
+                                                      mPlayer->getHolder()->mVideoCodecCtx->extradata);
     if (code == 0) {
         start();
     } else {
@@ -40,11 +40,10 @@ void HardVideoDecoder::decode() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
-            clearQueue();
             continue;
         }
 
-        if (mPlayer->getStatus()->isPause) {
+        if (mPlayer->getStatus()->isPause && mPlayer->getStatus()->needPauseRendCount == 0) {
             av_usleep(1000 * 10);
             continue;
         }
@@ -55,13 +54,17 @@ void HardVideoDecoder::decode() {
             continue;
         }
 
-        if(packet->buf==NULL){
-            av_packet_free(&packet);
-            continue;
+        if (mPlayer->getStatus()->needPauseRendCount > 0) {
+            if (!(packet->flags & AV_PKT_FLAG_KEY)) {
+                av_packet_free(&packet);
+                continue;
+            } else {
+                mPlayer->getStatus()->needPauseRendCount = 0;
+            }
         }
 
         double diff = getPacketDiffTime(packet);
-        if (diff < -0.01) {
+        if (!mPlayer->getStatus()->isPause && diff < -0.01) {
             int sleep = -(int) (diff * 1000);
             if (std::abs(sleep) > 50) {
                 sleep = 50;

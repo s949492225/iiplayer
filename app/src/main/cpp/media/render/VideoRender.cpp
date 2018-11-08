@@ -24,12 +24,6 @@ void VideoRender::playThread() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
         if (mPlayer->getStatus()->isSeek) {
-            clearQueue();
-            av_usleep(1000 * 5);
-            continue;
-        }
-
-        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 5);
             continue;
         }
@@ -42,19 +36,10 @@ void VideoRender::playThread() {
 
         AVFrame *frame = av_frame_alloc();
         int ret = mQueue->getFrame(frame);
-
         if (ret == 0) {
-            if (mPlayer->getStatus() && mPlayer->getStatus()->isSeek) {
-                double frame_time = frame->pts * av_q2d(mTimebase);
-                if (fabs(mPlayer->getStatus()->mSeekSec - frame_time) > 0.01) {
-                    av_frame_free(&frame);
-                    continue;
-                }
-            }
-
             if (frame->format == AV_PIX_FMT_YUV420P) {
                 double diff = getFrameDiffTime(frame);
-                if (diff < -0.01) {
+                if (!mPlayer->getStatus()->isPause && diff < -0.01) {
                     int sleep = -(int) (diff * 1000);
                     if (std::abs(sleep) > 50) {
                         sleep = 50;
@@ -64,10 +49,8 @@ void VideoRender::playThread() {
                         av_frame_free(&frame);
                         break;
                     }
-                } else if (diff > 0.05) {
-                    av_frame_free(&frame);
-                    continue;
                 }
+
                 mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
                                                      frame->data[0],
                                                      frame->data[1],
@@ -116,7 +99,7 @@ void VideoRender::playThread() {
 
                 double diff = getFrameDiffTime(frame);
 
-                if (diff < -0.01) {
+                if (!mPlayer->getStatus()->isPause && diff < -0.01) {
                     int sleep = -(int) (diff * 1000);
                     if (std::abs(sleep) > 50) {
                         sleep = 50;
@@ -141,7 +124,6 @@ void VideoRender::playThread() {
             }
         }
         av_frame_free(&frame);
-
     }
 
 }
