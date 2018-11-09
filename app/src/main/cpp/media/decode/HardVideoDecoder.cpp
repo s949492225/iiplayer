@@ -54,6 +54,7 @@ void HardVideoDecoder::decode() {
 
         if (packet == mPlayer->getHolder()->mFlushPkt) {
             //todo
+            continue;
         }
 
         double diff = getPacketDiffTime(packet);
