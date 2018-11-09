@@ -244,17 +244,19 @@ void PacketReader::handlerSeek() {
     int64_t rel = mPlayer->getStatus()->mSeekSec * AV_TIME_BASE;
     int ret = avformat_seek_file(mPlayer->getHolder()->mFormatCtx, -1, INT64_MIN, rel, INT64_MAX,
                                  AVSEEK_FLAG_BACKWARD);
-    if (ret == 0) {
-        mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
-    } else {
+    if (ret < 0) {
         LOGE("seek fail")
+    } else {
+        mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
+
+        mPlayer->getAudioDecoder()->clearQueue();
+        mPlayer->getAudioDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
+
+        mPlayer->getVideoDecoder()->clearQueue();
+        mPlayer->getVideoDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
+
+        mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
     }
-
-    mPlayer->getAudioDecoder()->clearQueue();
-    mPlayer->getAudioDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
-
-    mPlayer->getVideoDecoder()->clearQueue();
-    mPlayer->getVideoDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
 
     mPlayer->getStatus()->isEOF = false;
     mPlayer->getStatus()->isSeek = false;
