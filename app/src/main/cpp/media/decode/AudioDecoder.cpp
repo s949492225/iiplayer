@@ -17,7 +17,7 @@ void AudioDecoder::decode() {
     if (LOG_DEBUG) {
         LOGD("音频解码线程开始,tid:%i\n", gettid())
     }
-    AVPacket *packet = NULL;
+
     int ret = 0;
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
@@ -39,9 +39,9 @@ void AudioDecoder::decode() {
             continue;
         }
 
-        packet = av_packet_alloc();
+        AVPacket *packet = mQueue->getPacket();
 
-        if (mQueue && mQueue->getPacket(packet) != 0) {
+        if (packet == NULL) {
             av_packet_free(&packet);
             continue;
         }

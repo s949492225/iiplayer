@@ -16,9 +16,7 @@ void VideoDecoder::decode() {
     if (LOG_DEBUG) {
         LOGD("视频解码线程开始,tid:%i\n", gettid())
     }
-    AVPacket *packet = NULL;
     int ret = 0;
-
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
@@ -30,8 +28,8 @@ void VideoDecoder::decode() {
             continue;
         }
 
-        packet = av_packet_alloc();
-        if (mQueue->getPacket(packet) != 0) {
+        AVPacket *packet = mQueue->getPacket();
+        if (packet == NULL) {
             av_packet_free(&packet);
             continue;
         }

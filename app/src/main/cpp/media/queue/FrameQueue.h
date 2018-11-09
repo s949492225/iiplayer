@@ -29,7 +29,7 @@ public:
 
     int putFrame(AVFrame *packet);
 
-    AVFrame *FrameQueue::getFrame();
+    AVFrame *getFrame();
 
     int getQueueSize();
 

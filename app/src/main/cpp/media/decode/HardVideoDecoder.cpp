@@ -35,7 +35,6 @@ void HardVideoDecoder::decode() {
     if (LOG_DEBUG) {
         LOGD("视频解码线程开始,tid:%i\n", gettid())
     }
-    AVPacket *packet = NULL;
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
@@ -48,8 +47,8 @@ void HardVideoDecoder::decode() {
             continue;
         }
 
-        packet = av_packet_alloc();
-        if (mQueue->getPacket(packet) != 0) {
+        AVPacket *packet = mQueue->getPacket();
+        if (mQueue == NULL) {
             av_packet_free(&packet);
             continue;
         }
