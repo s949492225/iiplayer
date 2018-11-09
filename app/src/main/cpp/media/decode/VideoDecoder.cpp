@@ -34,7 +34,7 @@ void VideoDecoder::decode() {
         }
 
         if (packet == mPlayer->getHolder()->mFlushPkt) {
-            avcodec_flush_buffers(mPlayer->getHolder()->mAudioCodecCtx);
+            avcodec_flush_buffers(mPlayer->getHolder()->mVideoCodecCtx);
             continue;
         }
 
