@@ -61,8 +61,6 @@ void FrameQueue::clearAll() {
         AVFrame *packet = mQueue.front();
         mQueue.pop();
         av_frame_free(&packet);
-        av_free(packet);
-        packet = NULL;
     }
     pthread_mutex_unlock(&mMutex);
 }

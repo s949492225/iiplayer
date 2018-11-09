@@ -63,8 +63,6 @@ void PacketQueue::clearAll() {
         AVPacket *packet = mQueue.front();
         mQueue.pop();
         av_packet_free(&packet);
-        av_free(packet);
-        packet = NULL;
     }
     pthread_mutex_unlock(&mMutex);
 }
