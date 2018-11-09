@@ -30,20 +30,13 @@ int PacketQueue::putPacket(AVPacket *packet) {
     return 0;
 }
 
-int PacketQueue::getPacket(AVPacket *packet) {
+AVPacket *PacketQueue::getPacket() {
     pthread_mutex_lock(&mMutex);
-    int ret = -1;
-    while (mStatus != NULL && !mStatus->isExit && !mStatus->isSeek) {
+    AVPacket *ret = NULL;
+    while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
-            AVPacket *avPacket = mQueue.front();
-            if (av_packet_ref(packet, avPacket) == 0) {
-                mQueue.pop();
-                ret = 0;
-                av_packet_free(&avPacket);
-                av_free(avPacket);
-                avPacket = NULL;
-                pthread_cond_broadcast(&mCond);
-            }
+            ret = mQueue.front();
+            mQueue.pop();
             break;
         } else {
             pthread_cond_broadcast(&mHolder->mReadCond);

@@ -27,25 +27,20 @@ int FrameQueue::putFrame(AVFrame *packet) {
     return 0;
 }
 
-int FrameQueue::getFrame(AVFrame *frame) {
+AVFrame *FrameQueue::getFrame() {
     pthread_mutex_lock(&mMutex);
-    int ret = -1;
-    while (mStatus != NULL && !mStatus->isExit && !mStatus->isSeek) {
+    AVFrame *ret = NULL;
+    while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
-            AVFrame *avFrame = mQueue.front();
-            if (av_frame_ref(frame, avFrame) == 0) {
-                mQueue.pop();
-                ret = 0;
-                av_frame_free(&avFrame);
-                av_free(avFrame);
-                avFrame = NULL;
-                pthread_cond_broadcast(&mCond);
-            }
+            ret = mQueue.front();
+            mQueue.pop();
+            pthread_cond_broadcast(&mCond);
             break;
         } else {
             pthread_cond_wait(&mCond, &mMutex);
         }
     }
+
     pthread_mutex_unlock(&mMutex);
     return ret;
 }

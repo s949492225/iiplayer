@@ -32,7 +32,7 @@ public:
 
     int putPacket(AVPacket *packet);
 
-    int getPacket(AVPacket *packet);
+    AVPacket * getPacket();
 
     int getQueueSize();
 
