@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <bits/strcasecmp.h>
 
-#define MAX_QUEUE_SIZE (1024*1024)
+#define MAX_QUEUE_SIZE (80)
 
 PacketReader::PacketReader(MediaPlayer *player) {
     mPlayer = player;
@@ -155,8 +155,9 @@ void PacketReader::read() {
             pthread_mutex_unlock(&mReadMutex);
             continue;
         }
-        AVPacket *packet = av_packet_alloc();
+
         int ret;
+        AVPacket *packet = av_packet_alloc();
         if ((ret = av_read_frame(mPlayer->getHolder()->mFormatCtx, packet)) == 0) {
 
             if (packet->stream_index == mPlayer->getHolder()->mVideoStreamIndex) {
