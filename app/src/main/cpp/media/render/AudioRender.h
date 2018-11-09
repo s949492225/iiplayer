@@ -33,7 +33,7 @@ private:
     int mOutSize = 0;
     int64_t duration;
     FrameQueue *mQueue = NULL;
-    int mMaxQueueSize = 40;
+    int mMaxQueueSize = 4;
     int mOutChannelNum;
     SwrContext *mSwrCtx = NULL;
     std::thread *mPlayThread = NULL;

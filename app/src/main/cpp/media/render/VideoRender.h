@@ -29,7 +29,7 @@ private:
     int mWidth = 0;
     int mHeight = 0;
     FrameQueue *mQueue = NULL;
-    int mMaxQueueSize = 40;
+    int mMaxQueueSize = 4;
     AVRational mTimebase;
     std::thread *mPlayThread = NULL;
 
