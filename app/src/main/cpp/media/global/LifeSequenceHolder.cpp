@@ -6,15 +6,10 @@
 #include "LifeSequenceHolder.h"
 
 LifeSequenceHolder::LifeSequenceHolder() {
-    mFlushFrame = av_frame_alloc();
-    mFlushPkt = av_packet_alloc();
     pthread_cond_init(&mReadCond, NULL);
 }
 
 LifeSequenceHolder::~LifeSequenceHolder() {
-    av_frame_free(&mFlushFrame);
-    av_packet_free(&mFlushPkt);
-
     pthread_cond_destroy(&mReadCond);
 
     if (mVideoCodecParam != NULL) {
@@ -22,12 +17,14 @@ LifeSequenceHolder::~LifeSequenceHolder() {
     }
 
     if (mAudioCodecCtx != NULL) {
-        avcodec_close(mAudioCodecCtx);
         avcodec_free_context(&mAudioCodecCtx);
     }
 
+    if (mAbsCtx != NULL) {
+        av_bsf_free(&mAbsCtx);
+    }
+
     if (mVideoCodecCtx != NULL) {
-        avcodec_close(mVideoCodecCtx);
         avcodec_free_context(&mVideoCodecCtx);
     }
 
@@ -37,9 +34,6 @@ LifeSequenceHolder::~LifeSequenceHolder() {
         mFormatCtx = NULL;
     }
 
-    if (mAbsCtx != NULL) {
-        av_bsf_free(&mAbsCtx);
-    }
 
     avformat_network_deinit();
 }

@@ -28,19 +28,20 @@ void VideoDecoder::decode() {
             continue;
         }
 
-        AVPacket *packet = mQueue->getPacket();
+        Packet *packet = mQueue->getPacket();
         if (packet == NULL) {
             continue;
         }
 
-        if (packet == mPlayer->getHolder()->mFlushPkt) {
+        if (packet->isSplit) {
             avcodec_flush_buffers(mPlayer->getHolder()->mVideoCodecCtx);
+            ii_deletep(&packet);
             continue;
         }
 
-        ret = avcodec_send_packet(mPlayer->getHolder()->mVideoCodecCtx, packet);
+        ret = avcodec_send_packet(mPlayer->getHolder()->mVideoCodecCtx, packet->pkt);
         if (ret != 0) {
-            av_packet_free(&packet);
+            ii_deletep(&packet);
             continue;
         }
 
@@ -63,6 +64,6 @@ void VideoDecoder::decode() {
                 av_frame_free(&frame);
             }
         }
-        av_packet_free(&packet);
+        ii_deletep(&packet);
     }
 }

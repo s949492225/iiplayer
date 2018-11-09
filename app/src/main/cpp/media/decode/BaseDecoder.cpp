@@ -16,7 +16,7 @@ void BaseDecoder::start() {
     });
 }
 
-void BaseDecoder::putPacket(AVPacket *packet) {
+void BaseDecoder::putPacket(Packet *packet) {
     mQueue->putPacket(packet);
 }
 

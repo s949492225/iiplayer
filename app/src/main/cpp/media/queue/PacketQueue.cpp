@@ -4,6 +4,7 @@
 
 #include "PacketQueue.h"
 #include "../global/Status.h"
+#include "../other/util.h"
 
 PacketQueue::PacketQueue(Status *status, LifeSequenceHolder *holder, char *name) {
     mStatus = status;
@@ -20,7 +21,7 @@ PacketQueue::~PacketQueue() {
     pthread_cond_destroy(&mCond);
 }
 
-int PacketQueue::putPacket(AVPacket *packet) {
+int PacketQueue::putPacket(Packet *packet) {
     pthread_mutex_lock(&mMutex);
 
     mQueue.push(packet);
@@ -30,9 +31,9 @@ int PacketQueue::putPacket(AVPacket *packet) {
     return 0;
 }
 
-AVPacket *PacketQueue::getPacket() {
+Packet *PacketQueue::getPacket() {
     pthread_mutex_lock(&mMutex);
-    AVPacket *ret = NULL;
+    Packet *ret = NULL;
     while (mStatus != NULL && !mStatus->isExit) {
         if (mQueue.size() > 0) {
             ret = mQueue.front();
@@ -60,9 +61,9 @@ void PacketQueue::clearAll() {
     pthread_mutex_lock(&mMutex);
 
     while (!mQueue.empty()) {
-        AVPacket *packet = mQueue.front();
+        Packet *packet = mQueue.front();
         mQueue.pop();
-        av_packet_free(&packet);
+        ii_deletep(&packet);
     }
     pthread_mutex_unlock(&mMutex);
 }
@@ -71,3 +72,15 @@ void PacketQueue::notifyAll() {
     pthread_cond_broadcast(&mCond);
 }
 
+Packet::Packet() {
+    pkt = av_packet_alloc();
+}
+
+Packet::~Packet() {
+    av_packet_free(&pkt);
+}
+
+Packet::Packet(bool isSplit) {
+    pkt = av_packet_alloc();
+    this->isSplit = isSplit;
+}

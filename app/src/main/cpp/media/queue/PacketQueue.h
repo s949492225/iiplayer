@@ -17,22 +17,34 @@ extern "C"
 
 class Status;
 
+class Packet {
+public:
+    AVPacket *pkt = NULL;
+    bool isSplit = false;
+
+    Packet();
+    Packet(bool isSplit);
+
+    ~Packet();
+
+};
+
 class PacketQueue {
 private:
     char *mName;
-    std::queue<AVPacket *> mQueue;
+    std::queue<Packet *> mQueue;
     pthread_mutex_t mMutex;
     pthread_cond_t mCond;
     LifeSequenceHolder *mHolder;
     Status *mStatus = NULL;
 public:
-    PacketQueue(Status *status,LifeSequenceHolder *holder, char *name);
+    PacketQueue(Status *status, LifeSequenceHolder *holder, char *name);
 
     ~PacketQueue();
 
-    int putPacket(AVPacket *packet);
+    int putPacket(Packet *packet);
 
-    AVPacket * getPacket();
+    Packet *getPacket();
 
     int getQueueSize();
 

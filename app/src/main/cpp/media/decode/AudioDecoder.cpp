@@ -27,19 +27,20 @@ void AudioDecoder::decode() {
             continue;
         }
 
-        AVPacket *packet = mQueue->getPacket();
+        Packet *packet = mQueue->getPacket();
         if (packet == NULL) {
             continue;
         }
 
-        if (packet == mPlayer->getHolder()->mFlushPkt) {
+        if (packet->isSplit) {
             avcodec_flush_buffers(mPlayer->getHolder()->mAudioCodecCtx);
+            ii_deletep(&packet);
             continue;
         }
 
-        ret = avcodec_send_packet(mPlayer->getHolder()->mAudioCodecCtx, packet);
+        ret = avcodec_send_packet(mPlayer->getHolder()->mAudioCodecCtx, packet->pkt);
         if (ret != 0) {
-            av_packet_free(&packet);
+            ii_deletep(&packet);
             continue;
         }
 
@@ -70,7 +71,7 @@ void AudioDecoder::decode() {
                 av_frame_free(&frame);
             }
         }
-        av_packet_free(&packet);
+        ii_deletep(&packet);
     }
 }
 

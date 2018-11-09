@@ -52,6 +52,8 @@ void VideoRender::playThread() {
                                                  frame->data[0],
                                                  frame->data[1],
                                                  frame->data[2]);
+
+            av_frame_free(&yuvFrame);
         }
     }
 
@@ -85,7 +87,6 @@ AVFrame *VideoRender::scale(AVFrame *frame) {
 
     if (!sws_ctx) {
         av_frame_free(&yuvFrame);
-        av_free(yuvFrame);
         av_free(buffer);
         return NULL;
     }
@@ -97,6 +98,7 @@ AVFrame *VideoRender::scale(AVFrame *frame) {
             frame->height,
             yuvFrame->data,
             yuvFrame->linesize);
+    sws_freeContext(sws_ctx);
     return yuvFrame;
 }
 

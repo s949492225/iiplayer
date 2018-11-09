@@ -157,39 +157,39 @@ void PacketReader::read() {
         }
 
         int ret;
-        AVPacket *packet = av_packet_alloc();
-        if ((ret = av_read_frame(mPlayer->getHolder()->mFormatCtx, packet)) == 0) {
+        Packet *packet = new Packet();
+        if ((ret = av_read_frame(mPlayer->getHolder()->mFormatCtx, packet->pkt)) == 0) {
 
-            if (packet->stream_index == mPlayer->getHolder()->mVideoStreamIndex) {
+            if (packet->pkt->stream_index == mPlayer->getHolder()->mVideoStreamIndex) {
 
                 if (isHardCodec()) {
                     if (mPlayer->getHolder()->mAbsCtx != NULL) {
-                        if (av_bsf_send_packet(mPlayer->getHolder()->mAbsCtx, packet) != 0) {
-                            av_packet_free(&packet);
+                        if (av_bsf_send_packet(mPlayer->getHolder()->mAbsCtx, packet->pkt) != 0) {
+                            ii_deletep(&packet);
                             continue;
                         }
                         int recSuccess = 0;
                         while (recSuccess == 0) {
-                            AVPacket *newPacket = av_packet_alloc();
+                            Packet *newPacket = new Packet();
                             recSuccess = av_bsf_receive_packet(mPlayer->getHolder()->mAbsCtx,
-                                                               newPacket);
+                                                               newPacket->pkt);
                             videoDecoder->putPacket(newPacket);
                         }
-                        av_packet_free(&packet);
+                        ii_deletep(&packet);
                     }
                 } else {
                     videoDecoder->putPacket(packet);
                 }
 
-            } else if (packet->stream_index == mPlayer->getHolder()->mAudioStreamIndex) {
+            } else if (packet->pkt->stream_index == mPlayer->getHolder()->mAudioStreamIndex) {
                 audioDecoder->putPacket(packet);
-                checkBuffer(packet);
+                checkBuffer(packet->pkt);
             } else {
-                av_packet_free(&packet);
+                ii_deletep(&packet);
             }
 
         } else {
-            av_packet_free(&packet);
+            ii_deletep(&packet);
             if ((ret == AVERROR_EOF || avio_feof(mPlayer->getHolder()->mFormatCtx->pb) == 0)) {
                 mPlayer->getStatus()->isEOF = true;
                 continue;
@@ -251,10 +251,10 @@ void PacketReader::handlerSeek() {
         mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
 
         mPlayer->getAudioDecoder()->clearQueue();
-        mPlayer->getAudioDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
+        mPlayer->getAudioDecoder()->putPacket(new Packet(true));
 
         mPlayer->getVideoDecoder()->clearQueue();
-        mPlayer->getVideoDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
+        mPlayer->getVideoDecoder()->putPacket(new Packet(true));
 
         mPlayer->setClock(mPlayer->getStatus()->mSeekSec);
     }

@@ -29,7 +29,7 @@ protected:
 public:
     BaseDecoder(MediaPlayer *player);
     virtual ~BaseDecoder();
-    void putPacket(AVPacket *packet);
+    void putPacket(Packet *packet);
     void clearQueue();
     void notifyWait();
     int getQueueSize();

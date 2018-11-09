@@ -47,17 +47,18 @@ void HardVideoDecoder::decode() {
             continue;
         }
 
-        AVPacket *packet = mQueue->getPacket();
+        Packet *packet = mQueue->getPacket();
         if (mQueue == NULL) {
             continue;
         }
 
-        if (packet == mPlayer->getHolder()->mFlushPkt) {
+        if (packet->isSplit) {
             //todo
+            ii_deletep(&packet);
             continue;
         }
 
-        double diff = getPacketDiffTime(packet);
+        double diff = getPacketDiffTime(packet->pkt);
         if (!mPlayer->getStatus()->isPause && diff < -0.01) {
             int sleep = -(int) (diff * 1000);
             if (std::abs(sleep) > 50) {
@@ -65,15 +66,14 @@ void HardVideoDecoder::decode() {
             }
             av_usleep(static_cast<unsigned int>(sleep * 1000));
             if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
-                av_packet_free(&packet);
+                ii_deletep(&packet);
                 break;
             }
         }
 
-        mPlayer->getCallJava()->decodeAVPacket(false, packet->size, packet->data);
+        mPlayer->getCallJava()->decodeAVPacket(false, packet->pkt->size, packet->pkt->data);
 
-        av_packet_free(&packet);
-
+        ii_deletep(&packet);
     }
 }
 
