@@ -68,9 +68,8 @@ int AudioRender::getPcmData() {
             }
         }
 
-        AVFrame *frame = av_frame_alloc();
-        int ret = mQueue->getFrame(frame);
-        if (ret == 0) {
+        AVFrame *frame = mQueue->getFrame();
+        if (frame != NULL) {
             if (frame->channels && frame->channel_layout == 0) {
                 frame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(
                         frame->channels));
@@ -85,13 +84,7 @@ int AudioRender::getPcmData() {
             mPlayer->setClock(frame->pts * av_q2d(mTimebase));
 
             av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
             break;
-        } else {
-            av_frame_free(&frame);
-            av_free(frame);
-            frame = NULL;
         }
     }
     return mOutSize;

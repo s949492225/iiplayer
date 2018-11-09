@@ -34,9 +34,8 @@ void VideoRender::playThread() {
             continue;
         }
 
-        AVFrame *frame = av_frame_alloc();
-        int ret = mQueue->getFrame(frame);
-        if (ret == 0) {
+        AVFrame *frame = mQueue->getFrame();
+        if (frame != NULL) {
             if (frame->format == AV_PIX_FMT_YUV420P) {
                 double diff = getFrameDiffTime(frame);
                 if (!mPlayer->getStatus()->isPause && diff < -0.01) {
@@ -123,7 +122,6 @@ void VideoRender::playThread() {
 
             }
         }
-        av_frame_free(&frame);
     }
 
 }
