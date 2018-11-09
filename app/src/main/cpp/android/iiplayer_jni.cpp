@@ -93,7 +93,8 @@ static void JNICALL nativeSeek(JNIEnv *env, jobject obj, jint sec) {
 static void JNICALL nativeStop(JNIEnv *env, jobject obj) {
     MediaPlayer *player = get_media_player(env, obj);
     if (player != NULL) {
-        set_media_player(env, obj, NULL);
+        player->stop();
+        delete player;
     }
 }
 
