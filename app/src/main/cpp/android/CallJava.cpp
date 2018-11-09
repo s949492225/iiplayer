@@ -21,7 +21,6 @@ CallJava::CallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
 }
 
 CallJava::~CallJava() {
-    mEnv->DeleteGlobalRef(mObj);
     if (mVm != NULL) {
         mVm = NULL;
     }
@@ -206,7 +205,7 @@ void CallJava::decodeAVPacket(bool isMain, int size, uint8_t *src_data) {
     }
 }
 
-void CallJava::releaseMediaCodec(bool isMain) {
+void CallJava::release(bool isMain) {
     JNIEnv *jniEnv;
     if (!isMain) {
         if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
@@ -217,10 +216,11 @@ void CallJava::releaseMediaCodec(bool isMain) {
         jniEnv = mEnv;
     }
     jniEnv->CallVoidMethod(mObj, mJmidReleaseMediaCodec);
+
+    mEnv->DeleteGlobalRef(mObj);
     if (!isMain) {
         mVm->DetachCurrentThread();
     }
-
 
 }
 

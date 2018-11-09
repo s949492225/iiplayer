@@ -48,7 +48,7 @@ public:
 
     void decodeAVPacket(bool isMain, int size, uint8_t *data);
 
-    void releaseMediaCodec(bool b);
+    void release(bool isMain);
 };
 
 

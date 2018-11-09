@@ -157,9 +157,9 @@ void MediaPlayer::release(bool isMain) {
     ii_deletep(&mVideoDecoder);
     ii_deletep(&mAudioRender);
     ii_deletep(&mVideoRender);
-    getCallJava()->releaseMediaCodec(isMain);
     ii_deletep(&mStatus);
     ii_deletep(&mHolder);
+    mCallJava->release(isMain);
     ii_deletep(&mCallJava);
 
     if (LOG_DEBUG) {
