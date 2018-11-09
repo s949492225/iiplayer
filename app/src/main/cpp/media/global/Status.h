@@ -16,6 +16,7 @@ public:
     bool isPlayEnd = false;
     bool isEOF = false;
     int mSeekSec = 0;
+    int mStep = 0;
 };
 
 #endif //IIPLAYER_STATUS_H

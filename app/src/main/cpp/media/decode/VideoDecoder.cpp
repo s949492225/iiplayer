@@ -18,12 +18,8 @@ void VideoDecoder::decode() {
     }
     int ret = 0;
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
-        if (mPlayer->getStatus()->isSeek) {
-            av_usleep(1000 * 10);
-            continue;
-        }
 
-        if (mPlayer->getStatus()->isPause) {
+        if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
             continue;
         }
@@ -36,6 +32,12 @@ void VideoDecoder::decode() {
         if (packet->isSplit) {
             avcodec_flush_buffers(mPlayer->getHolder()->mVideoCodecCtx);
             ii_deletep(&packet);
+            mPlayer->getStatus()->mStep = 1;
+            continue;
+        }
+
+        if (mPlayer->getStatus()->isPause && mPlayer->getStatus()->mStep == 0) {
+            av_usleep(1000 * 10);
             continue;
         }
 
@@ -57,6 +59,9 @@ void VideoDecoder::decode() {
                 if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
                     av_frame_free(&frame);
                     break;
+                }
+                if (mPlayer->getStatus()->mStep>0) {
+                    mPlayer->getStatus()->mStep--;
                 }
                 mPlayer->getVideoRender()->putFrame(frame);
 
