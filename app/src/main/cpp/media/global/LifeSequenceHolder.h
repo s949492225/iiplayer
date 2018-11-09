@@ -25,8 +25,8 @@ public:
     AVCodecContext *mVideoCodecCtx = NULL;
     AVCodecParameters *mVideoCodecParam = NULL;
     AVBSFContext *mAbsCtx = NULL;
-    AVFrame *mFlushFrame;
-    AVPacket *mFlushPkt;
+    AVFrame *mFlushFrame = NULL;
+    AVPacket *mFlushPkt = NULL;
     int mAudioStreamIndex = -1;
     int mVideoStreamIndex = -1;
 
