@@ -52,6 +52,10 @@ void HardVideoDecoder::decode() {
             continue;
         }
 
+        if (packet == mPlayer->getHolder()->mFlushPkt) {
+            //todo
+        }
+
         double diff = getPacketDiffTime(packet);
         if (!mPlayer->getStatus()->isPause && diff < -0.01) {
             int sleep = -(int) (diff * 1000);

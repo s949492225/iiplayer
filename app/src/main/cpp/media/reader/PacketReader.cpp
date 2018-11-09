@@ -251,11 +251,10 @@ void PacketReader::handlerSeek() {
     }
 
     mPlayer->getAudioDecoder()->clearQueue();
-    mPlayer->getAudioRender()->clearQueue();
+    mPlayer->getAudioDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
+
     mPlayer->getVideoDecoder()->clearQueue();
-    if (mPlayer->getVideoRender() != NULL) {
-        mPlayer->getVideoRender()->clearQueue();
-    }
+    mPlayer->getVideoDecoder()->putPacket(mPlayer->getHolder()->mFlushPkt);
 
     mPlayer->getStatus()->isEOF = false;
     mPlayer->getStatus()->isSeek = false;

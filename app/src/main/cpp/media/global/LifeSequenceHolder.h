@@ -17,17 +17,23 @@ extern "C" {
 class LifeSequenceHolder {
 public:
     LifeSequenceHolder();
+
     ~LifeSequenceHolder();
+
     AVFormatContext *mFormatCtx = NULL;
     AVCodecContext *mAudioCodecCtx = NULL;
     AVCodecContext *mVideoCodecCtx = NULL;
     AVCodecParameters *mVideoCodecParam = NULL;
     AVBSFContext *mAbsCtx = NULL;
+    AVFrame *mFlushFrame;
+    AVPacket *mFlushPkt;
     int mAudioStreamIndex = -1;
     int mVideoStreamIndex = -1;
+
     pthread_cond_t mReadCond;
 
     AVRational getAudioTimeBase();
+
     AVRational getVideoTimeBase();
 };
 

@@ -6,10 +6,14 @@
 #include "LifeSequenceHolder.h"
 
 LifeSequenceHolder::LifeSequenceHolder() {
+    mFlushFrame = av_frame_alloc();
+    mFlushPkt = av_packet_alloc();
     pthread_cond_init(&mReadCond, NULL);
 }
 
 LifeSequenceHolder::~LifeSequenceHolder() {
+    av_frame_free(&mFlushFrame);
+    av_packet_free(&mFlushPkt);
 
     pthread_cond_destroy(&mReadCond);
 
