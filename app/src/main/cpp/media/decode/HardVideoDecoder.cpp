@@ -35,26 +35,26 @@ void HardVideoDecoder::decode() {
     if (LOG_DEBUG) {
         LOGD("视频解码线程开始,tid:%i\n", gettid())
     }
-
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
             continue;
         }
 
-        if (mPlayer->getStatus()->isPause) {
-            av_usleep(1000 * 10);
-            continue;
-        }
-
         Packet *packet = mQueue->getPacket();
-        if (mQueue == NULL) {
+        if (packet == NULL) {
             continue;
         }
 
         if (packet->isSplit) {
-            //todo
+            avcodec_flush_buffers(mPlayer->getHolder()->mVideoCodecCtx);
             ii_deletep(&packet);
+            mPlayer->getStatus()->mStep = 1;
+            continue;
+        }
+
+        if (mPlayer->getStatus()->isPause && mPlayer->getStatus()->mStep == 0) {
+            av_usleep(1000 * 10);
             continue;
         }
 
@@ -69,6 +69,10 @@ void HardVideoDecoder::decode() {
                 ii_deletep(&packet);
                 break;
             }
+        }
+
+        if (mPlayer->getStatus()->mStep > 0) {
+            mPlayer->getStatus()->mStep--;
         }
 
         mPlayer->getCallJava()->decodeAVPacket(false, packet->pkt->size, packet->pkt->data);
