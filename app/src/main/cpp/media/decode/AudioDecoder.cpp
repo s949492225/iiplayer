@@ -22,27 +22,13 @@ void AudioDecoder::decode() {
 
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
 
-        //为seek清理异常数据
-        if (mPlayer->getStatus()->isSeek) {
-            pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
-            mPlayer->getStatus()->mSeekReadyCount += 1;
-            pthread_cond_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex);
-            pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
-            //clear
-            avcodec_flush_buffers(mPlayer->getHolder()->mAudioCodecCtx);
-            clearQueue();
-            continue;
-        }
-
         if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 10);
             continue;
         }
 
         AVPacket *packet = mQueue->getPacket();
-
         if (packet == NULL) {
-            av_packet_free(&packet);
             continue;
         }
 

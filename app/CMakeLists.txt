@@ -10,7 +10,6 @@ add_library( # Sets the name of the library.
         src/main/cpp/android/CallJava.cpp
         src/main/cpp/media/MediaPlayer.cpp
         src/main/cpp/media/queue/PacketQueue.cpp
-        src/main/cpp/media/global/Status.cpp
         src/main/cpp/media/global/LifeSequenceHolder.cpp
         src/main/cpp/media/other/util.cpp
         src/main/cpp/media/queue/FrameQueue.cpp
@@ -18,7 +17,6 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/decode/AudioDecoder.cpp
         src/main/cpp/media/decode/VideoDecoder.cpp
         src/main/cpp/media/decode/BaseDecoder.cpp
-
         src/main/cpp/media/decode/HardVideoDecoder.cpp
         src/main/cpp/media/render/AudioRender.cpp
         src/main/cpp/media/render/VideoRender.cpp

@@ -52,6 +52,8 @@ public:
     void clearQueue();
 
     void notifyWait();
+
+    AVFrame *scale(AVFrame *frame);
 };
 
 

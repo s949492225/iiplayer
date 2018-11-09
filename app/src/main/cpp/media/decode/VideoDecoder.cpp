@@ -23,24 +23,14 @@ void VideoDecoder::decode() {
             continue;
         }
 
-        if (mPlayer->getStatus()->isPause && mPlayer->getStatus()->needPauseRendCount == 0) {
+        if (mPlayer->getStatus()->isPause) {
             av_usleep(1000 * 10);
             continue;
         }
 
         AVPacket *packet = mQueue->getPacket();
         if (packet == NULL) {
-            av_packet_free(&packet);
             continue;
-        }
-
-        if (mPlayer->getStatus()->needPauseRendCount > 0) {
-            if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-                av_packet_free(&packet);
-                continue;
-            } else {
-                mPlayer->getStatus()->needPauseRendCount = 0;
-            }
         }
 
         ret = avcodec_send_packet(mPlayer->getHolder()->mVideoCodecCtx, packet);

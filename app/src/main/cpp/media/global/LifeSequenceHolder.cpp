@@ -7,15 +7,11 @@
 
 LifeSequenceHolder::LifeSequenceHolder() {
     pthread_cond_init(&mReadCond, NULL);
-    pthread_cond_init(&mSeekCond, NULL);
-    pthread_mutex_init(&mSeekMutex, NULL);
 }
 
 LifeSequenceHolder::~LifeSequenceHolder() {
 
     pthread_cond_destroy(&mReadCond);
-    pthread_cond_destroy(&mSeekCond);
-    pthread_mutex_destroy(&mSeekMutex);
 
     if (mVideoCodecParam != NULL) {
         avcodec_parameters_free(&mVideoCodecParam);

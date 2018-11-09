@@ -127,7 +127,6 @@ void PacketReader::read() {
         return;
     }
     BaseDecoder *audioDecoder = mPlayer->getAudioDecoder();
-    BaseDecoder *audioRender = mPlayer->getVideoDecoder();
     BaseDecoder *videoDecoder = mPlayer->getVideoDecoder();
     //read packet
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit &&
@@ -139,30 +138,9 @@ void PacketReader::read() {
             pthread_mutex_unlock(&mReadMutex);
             continue;
         }
-        //等音频的decoder 和 render清理干净后才可以开始seek,进度条依赖音频所以不管视频
-        if (mPlayer->getStatus()->isSeek) {
-            while (!mPlayer->getStatus()->isExit) {
-                pthread_mutex_lock(&mPlayer->getHolder()->mSeekMutex);
-                if (mPlayer->getStatus()->mSeekReadyCount == 2 ||
-                    (mPlayer->getStatus()->isPause &&
-                     mPlayer->getStatus()->mSeekReadyCount == 1)) {
 
-                    mPlayer->getStatus()->mSeekReadyCount = 0;
-                    pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
-                    break;
-                }
-                audioDecoder->notifyWait();
-                audioRender->notifyWait();
-                mPlayer->getVideoDecoder()->notifyWait();
-                thread_wait(&mPlayer->getHolder()->mSeekCond, &mPlayer->getHolder()->mSeekMutex,
-                            10);
-                pthread_mutex_unlock(&mPlayer->getHolder()->mSeekMutex);
-            }
-            if (mPlayer->getStatus()->isExit) {
-                continue;
-            }
+        if (mPlayer->getStatus()->isSeek) {
             handlerSeek();
-            pthread_cond_broadcast(&mPlayer->getHolder()->mSeekCond);
         }
 
         bool isSizeOver =
@@ -279,7 +257,6 @@ void PacketReader::handlerSeek() {
         mPlayer->getVideoRender()->clearQueue();
     }
 
-    mPlayer->getStatus()->needPauseRendCount = MAX_REND_COUNT;
     mPlayer->getStatus()->isEOF = false;
     mPlayer->getStatus()->isSeek = false;
     mPlayer->sendMsg(false, ACTION_PLAY_SEEK_OVER);

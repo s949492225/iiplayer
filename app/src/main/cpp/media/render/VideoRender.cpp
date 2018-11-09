@@ -22,109 +22,84 @@ void VideoRender::play() {
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
-
-        if (mPlayer->getStatus()->isSeek) {
-            av_usleep(1000 * 5);
-            continue;
-        }
-
-        if (mQueue->getQueueSize() == 0)//加载中
-        {
-            av_usleep(1000 * 10);
-            continue;
-        }
-
         AVFrame *frame = mQueue->getFrame();
         if (frame != NULL) {
+
+            AVFrame *yuvFrame = NULL;
             if (frame->format == AV_PIX_FMT_YUV420P) {
-                double diff = getFrameDiffTime(frame);
-                if (!mPlayer->getStatus()->isPause && diff < -0.01) {
-                    int sleep = -(int) (diff * 1000);
-                    if (std::abs(sleep) > 50) {
-                        sleep = 50;
-                    }
-                    av_usleep(static_cast<unsigned int>(sleep * 1000));
-                    if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
-                        av_frame_free(&frame);
-                        break;
-                    }
-                }
-
-                mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
-                                                     frame->data[0],
-                                                     frame->data[1],
-                                                     frame->data[2]);
+                yuvFrame = frame;
             } else {
-                LOGE("当前视频不是YUV420P格式");
-                AVFrame *yuvFrame = av_frame_alloc();
-                int num = av_image_get_buffer_size(
-                        AV_PIX_FMT_YUV420P,
-                        mWidth,
-                        mHeight,
-                        1);
-                uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-                av_image_fill_arrays(
-                        yuvFrame->data,
-                        yuvFrame->linesize,
-                        buffer,
-                        AV_PIX_FMT_YUV420P,
-                        mWidth,
-                        mHeight,
-                        1);
-                SwsContext *sws_ctx = sws_getContext(
-                        mWidth,
-                        mHeight,
-                        mPixFmt,
-                        mWidth,
-                        mHeight,
-                        AV_PIX_FMT_YUV420P,
-                        SWS_BICUBIC, NULL, NULL, NULL);
-
-                if (!sws_ctx) {
-                    av_frame_free(&yuvFrame);
-                    av_free(yuvFrame);
-                    av_free(buffer);
+                yuvFrame = scale(frame);
+                if (yuvFrame == NULL)
                     continue;
-                }
-                sws_scale(
-                        sws_ctx,
-                        reinterpret_cast<const uint8_t *const *>(frame->data),
-                        frame->linesize,
-                        0,
-                        frame->height,
-                        yuvFrame->data,
-                        yuvFrame->linesize);
-
-
-                double diff = getFrameDiffTime(frame);
-
-                if (!mPlayer->getStatus()->isPause && diff < -0.01) {
-                    int sleep = -(int) (diff * 1000);
-                    if (std::abs(sleep) > 50) {
-                        sleep = 50;
-                    }
-                    av_usleep(static_cast<unsigned int>(sleep * 1000));
-                    if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
-                        av_frame_free(&yuvFrame);
-                        av_frame_free(&frame);
-                        av_free(buffer);
-                        break;
-                    }
-                }
-
-                mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
-                                                     yuvFrame->data[0],
-                                                     yuvFrame->data[1],
-                                                     yuvFrame->data[2]);
-                sws_freeContext(sws_ctx);
-                av_frame_free(&yuvFrame);
-                av_free(buffer);
-
             }
+
+            double diff = getFrameDiffTime(yuvFrame);
+
+            if (!mPlayer->getStatus()->isPause && diff < -0.01) {
+                int sleep = -(int) (diff * 1000);
+                if (std::abs(sleep) > 50) {
+                    sleep = 50;
+                }
+                av_usleep(static_cast<unsigned int>(sleep * 1000));
+                if (mPlayer->getStatus() == NULL || mPlayer->getStatus()->isExit) {
+                    av_frame_free(&yuvFrame);
+                    break;
+                }
+            }
+
+            mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
+                                                 frame->data[0],
+                                                 frame->data[1],
+                                                 frame->data[2]);
         }
     }
 
 }
+
+AVFrame *VideoRender::scale(AVFrame *frame) {
+    AVFrame *yuvFrame = av_frame_alloc();
+    int num = av_image_get_buffer_size(
+            AV_PIX_FMT_YUV420P,
+            mWidth,
+            mHeight,
+            1);
+    uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
+
+    av_image_fill_arrays(
+            yuvFrame->data,
+            yuvFrame->linesize,
+            buffer,
+            AV_PIX_FMT_YUV420P,
+            mWidth,
+            mHeight,
+            1);
+    SwsContext *sws_ctx = sws_getContext(
+            mWidth,
+            mHeight,
+            mPixFmt,
+            mWidth,
+            mHeight,
+            AV_PIX_FMT_YUV420P,
+            SWS_BICUBIC, NULL, NULL, NULL);
+
+    if (!sws_ctx) {
+        av_frame_free(&yuvFrame);
+        av_free(yuvFrame);
+        av_free(buffer);
+        return NULL;
+    }
+    sws_scale(
+            sws_ctx,
+            reinterpret_cast<const uint8_t *const *>(frame->data),
+            frame->linesize,
+            0,
+            frame->height,
+            yuvFrame->data,
+            yuvFrame->linesize);
+    return yuvFrame;
+}
+
 
 double VideoRender::getFrameDiffTime(AVFrame *frame) {
     double pts = av_frame_get_best_effort_timestamp(frame);
