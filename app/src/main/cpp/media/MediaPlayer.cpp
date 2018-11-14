@@ -10,7 +10,9 @@
 MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
     mHolder = new LifeSequenceHolder();
     mCallJava = new CallJava(pVM, pEnv, obj);
-    mNativeWindow = ANativeWindow_fromSurface(pEnv, mCallJava->getSurface(true));
+    jobject surface = mCallJava->getSurface(true);
+    mNativeWindow = ANativeWindow_fromSurface(pEnv, surface);
+    pEnv->DeleteLocalRef(surface);
 }
 
 void MediaPlayer::open(const char *url) {
@@ -161,6 +163,12 @@ void MediaPlayer::release(bool isMain) {
     ii_deletep(&mVideoRender);
     ii_deletep(&mStatus);
     ii_deletep(&mHolder);
+
+    if (mNativeWindow != NULL) {
+        ANativeWindow_release(mNativeWindow);
+        mNativeWindow = NULL;
+    }
+
     mCallJava->release(isMain);
     ii_deletep(&mCallJava);
 

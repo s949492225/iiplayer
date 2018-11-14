@@ -70,23 +70,27 @@ private:
     GLuint uTextureId;
     GLuint vTextureId;
 
+    GLuint programId;
+
     EGLConfig eglConf;
-    EGLSurface eglWindow;
+    EGLSurface eglSurface;
     EGLContext eglCtx;
     EGLDisplay eglDisp;
 
     JavaVM *vm;
-
     ANativeWindow *nativeWindow;
     int renderType;
 public:
-    SDLVideo(JavaVM *vm,  ANativeWindow *window);
+    SDLVideo(JavaVM *vm, ANativeWindow *window);
+
+    ~SDLVideo();
 
     void initEGL(ANativeWindow *nativeWindow);
 
     void initOpenGL();
 
-    void drawYUV(int w,int h,void *y, void *u, void *v);
+    void drawYUV(int w, int h, void *y, void *u, void *v);
+
 };
 
 

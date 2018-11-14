@@ -22,7 +22,7 @@ SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window) {
 }
 
 void SDLVideo::initOpenGL() {
-    GLuint programId = createProgram(vertexShaderString, fragmentShaderString);
+    programId = createProgram(vertexShaderString, fragmentShaderString);
 
     GLuint aPositionHandle = (GLuint) glGetAttribLocation(programId, "aPosition");
     GLuint aTextureCoordHandle = (GLuint) glGetAttribLocation(programId, "aTexCoord");
@@ -92,7 +92,7 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
     eglChooseConfig(eglDisp, configSpec, &eglConf, 1, &numConfigs);
 
     //create surface
-    eglWindow = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
+    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
 
     //create contex
     const EGLint ctxAttr[] = {
@@ -101,7 +101,7 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
     };
     eglCtx = eglCreateContext(eglDisp, eglConf, EGL_NO_CONTEXT, ctxAttr);
     //绑定到当前线程
-    eglMakeCurrent(eglDisp, eglWindow, eglWindow, eglCtx);
+    eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
 }
 
 void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
@@ -136,6 +136,33 @@ void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    eglSwapBuffers(eglDisp, eglWindow);
+    eglSwapBuffers(eglDisp, eglSurface);
 
 }
+
+SDLVideo::~SDLVideo() {
+    delete vm;
+    //release opengl
+    glDeleteTextures(1, &yTextureId);
+    glDeleteTextures(1, &uTextureId);
+    glDeleteTextures(1, &vTextureId);
+    glDeleteProgram(programId);
+    //release egl
+    eglMakeCurrent(eglDisp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroyContext(eglDisp, eglCtx);
+    eglDestroySurface(eglDisp, eglSurface);
+    eglTerminate(eglDisp);
+
+    eglDisp = EGL_NO_DISPLAY;
+    eglSurface = EGL_NO_SURFACE;
+    eglCtx = EGL_NO_CONTEXT;
+}
+
+
+
+
+
+
+
+
+
