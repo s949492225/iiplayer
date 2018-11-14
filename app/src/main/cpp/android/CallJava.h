@@ -19,10 +19,7 @@ private:
     JavaVM *mVm = NULL;
     JNIEnv *mEnv = NULL;
     jobject mObj;
-    jclass mjcls;
     jmethodID mJmidSendMsg;
-    jmethodID mJmidSetFrameData;
-    jmethodID mJmidSetCodeType;
     jmethodID mJmidInitMediaCodec;
     jmethodID mJmidIsSupportHard;
     jmethodID mJmidDecodeAVPacket;
@@ -35,10 +32,6 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
-    void setFrameData(bool isMain, int width, int height, uint8_t *fy, uint8_t *fu, uint8_t *fv);
-
-    void setCodecType(int type);
-
     bool isSoftOnly(bool isMain);
 
     bool isSupportHard(bool isMain, const char *codecName);
@@ -49,6 +42,8 @@ public:
     void decodeAVPacket(bool isMain, int size, uint8_t *data);
 
     void release(bool isMain);
+
+    jobject getSurface(bool isMain);
 };
 
 

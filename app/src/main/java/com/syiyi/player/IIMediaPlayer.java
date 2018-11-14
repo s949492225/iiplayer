@@ -1,20 +1,15 @@
 package com.syiyi.player;
 
-import android.graphics.Bitmap;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.Message;
 import android.view.Surface;
-
 import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnErrorListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.listener.OnSeekCompleteListener;
-import com.syiyi.player.opengl.IIGlSurfaceView;
-import com.syiyi.player.opengl.OnGlSurfaceViewCreateListener;
-
 import java.nio.ByteBuffer;
 
 
@@ -30,7 +25,6 @@ public class IIMediaPlayer {
     private OnBufferTimeListener mBufferTimeListener;
     private OnErrorListener mErrorListener;
     private OnSeekCompleteListener mOnSeekCompleteListener;
-    private IIGlSurfaceView mSurfaceView;
 
     private Surface mSurface;
     private MediaFormat mMediaFormat;
@@ -138,19 +132,9 @@ public class IIMediaPlayer {
         this.url = url;
     }
 
-    public void setSurfaceView(IIGlSurfaceView view) {
-        mSurfaceView = view;
-        mSurfaceView.setOnGlSurfaceViewOncreateListener(new OnGlSurfaceViewCreateListener() {
-            @Override
-            public void onGlSurfaceCreated(Surface surface) {
-                mSurface = surface;
-            }
 
-            @Override
-            public void onCutVideoImg(Bitmap bitmap) {
-
-            }
-        });
+    public void setSurface(Surface surface) {
+        this.mSurface = surface;
     }
 
     public void prepareAsync(OnPrepareListener listener) {
@@ -170,18 +154,6 @@ public class IIMediaPlayer {
 
     private void sendMessage(Message msg) {
         mHandler.sendMessage(msg);
-    }
-
-    private void setFrameData(int width, int height, byte[] y, byte[] u, byte[] v) {
-        if (mSurfaceView != null) {
-            mSurfaceView.setFrameData(width, height, y, u, v);
-        }
-    }
-
-    private void setCodecType(int type) {
-        if (mSurfaceView != null) {
-            mSurfaceView.setCodecType(type);
-        }
     }
 
     public void play() {
@@ -310,7 +282,6 @@ public class IIMediaPlayer {
     private int initMediaCodec(String codeName, int width, int height, byte[] csd0, byte[] csd1) {
         if (mSurface != null) {
             try {
-                mSurfaceView.setCodecType(IIGlSurfaceView.CODEC_HARD);
                 String mime = VideoSupportUtil.findVideoCodecName(codeName);
                 mMediaFormat = MediaFormat.createVideoFormat(mime, width, height);
                 mMediaFormat.setInteger(MediaFormat.KEY_WIDTH, width);

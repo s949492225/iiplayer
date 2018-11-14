@@ -21,6 +21,7 @@ void VideoRender::play() {
 
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
+    mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow());
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         AVFrame *frame = mQueue->getFrame();
         if (frame != NULL) {
@@ -48,14 +49,15 @@ void VideoRender::playThread() {
                 }
             }
 
-            mPlayer->getCallJava()->setFrameData(false, mWidth, mHeight,
-                                                 frame->data[0],
-                                                 frame->data[1],
-                                                 frame->data[2]);
+            if (mSDLVideo != NULL) {
+                mSDLVideo->drawYUV(mWidth, mHeight, frame->data[0], frame->data[1], frame->data[2]);
+            }
 
             av_frame_free(&yuvFrame);
         }
     }
+
+    delete mSDLVideo;
 
 }
 

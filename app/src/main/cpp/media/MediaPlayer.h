@@ -29,6 +29,7 @@ private:
     LifeSequenceHolder *mHolder = NULL;
     Status *mStatus = NULL;
     PacketReader *mReader = NULL;
+    ANativeWindow *mNativeWindow;
     BaseDecoder *mAudioDecoder = NULL;
     BaseDecoder *mVideoDecoder = NULL;
     AudioRender *mAudioRender = NULL;
@@ -103,5 +104,7 @@ public:
     void setClock(double clock);
 
     double getClock();
+
+    ANativeWindow *getWindow();
 
 };

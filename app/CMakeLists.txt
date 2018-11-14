@@ -1,5 +1,7 @@
-
 cmake_minimum_required(VERSION 3.4.1)
+
+# now build app's shared lib
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 include_directories(src/main/cpp/include/ffmpeg)
 
@@ -20,6 +22,8 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/decode/HardVideoDecoder.cpp
         src/main/cpp/media/render/AudioRender.cpp
         src/main/cpp/media/render/VideoRender.cpp
+        src/main/cpp/media/sdl/SDLVideo.cpp
+        src/main/cpp/media/sdl/shaderUtils.cpp
         src/main/cpp/android/util.cpp
         )
 
@@ -79,7 +83,11 @@ target_link_libraries( # Specifies the target library.
         postproc
         swresample
         swscale
+        android
+        -landroid
         OpenSLES
+        EGL
+        GLESv2
         log)
 
 # Links the target library to the log library

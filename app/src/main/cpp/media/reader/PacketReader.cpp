@@ -102,11 +102,9 @@ int PacketReader::prepare() {
     mPlayer->setAudioRender(new AudioRender(mPlayer));
 
     if (isHardCodec()) {
-        mPlayer->getCallJava()->setCodecType(DECODE_HARD);
         mPlayer->setVideoDecoder(new HardVideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
     } else {
-        mPlayer->getCallJava()->setCodecType(DECODE_SOFT);
         mPlayer->setVideoDecoder(new VideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
         mPlayer->setVideoRender(new VideoRender(mPlayer));
@@ -182,8 +180,8 @@ void PacketReader::read() {
                 }
 
             } else if (packet->pkt->stream_index == mPlayer->getHolder()->mAudioStreamIndex) {
-                audioDecoder->putPacket(packet);
                 checkBuffer(packet->pkt);
+                audioDecoder->putPacket(packet);
             } else {
                 ii_deletep(&packet);
             }
@@ -196,7 +194,7 @@ void PacketReader::read() {
             }
             if (mPlayer->getHolder()->mFormatCtx->pb &&
                 mPlayer->getHolder()->mFormatCtx->pb->error) {
-                mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
+//                mPlayer->sendMsg(false, ERROR_REDAD_EXCEPTION);
                 seekErrorPos(static_cast<int>(mPlayer->getClock()));
             }
             pthread_mutex_lock(&mReadMutex);

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "../other/util.h"
 #include "../queue/FrameQueue.h"
+#include "../sdl/SDLVideo.h"
 
 
 extern "C" {
@@ -32,6 +33,7 @@ private:
     int mMaxQueueSize = 4;
     AVRational mTimebase;
     std::thread *mPlayThread = NULL;
+    SDLVideo *mSDLVideo = NULL;
 
     double getFrameDiffTime(AVFrame *avFrame);
 

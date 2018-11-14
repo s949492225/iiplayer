@@ -9,15 +9,13 @@ CallJava::CallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     mVm = vm;
     mEnv = env;
     mObj = mEnv->NewGlobalRef(obj);
-    mjcls = env->GetObjectClass(obj);
-    mJmidSendMsg = env->GetMethodID(mjcls, "sendMessage", "(Landroid/os/Message;)V");
-    mJmidSetFrameData = env->GetMethodID(mjcls, "setFrameData", "(II[B[B[B)V");
-    mJmidSetCodeType = env->GetMethodID(mjcls, "setCodecType", "(I)V");
-    mJmidInitMediaCodec = env->GetMethodID(mjcls, "initMediaCodec", "(Ljava/lang/String;II[B[B)I");
-    mJmidIsSupportHard = env->GetMethodID(mjcls, "isSupportHard", "(Ljava/lang/String;)Z");
-    mJmidDecodeAVPacket = env->GetMethodID(mjcls, "decodeAVPacket", "(I[B)V");
-    mJmidReleaseMediaCodec = env->GetMethodID(mjcls, "releaseMediaCodec", "()V");
-    mJfidIsSoftOnly = env->GetFieldID(mjcls, "isSoftOnly", "Z");
+    jclass jcls = env->GetObjectClass(obj);
+    mJmidSendMsg = env->GetMethodID(jcls, "sendMessage", "(Landroid/os/Message;)V");
+    mJmidInitMediaCodec = env->GetMethodID(jcls, "initMediaCodec", "(Ljava/lang/String;II[B[B)I");
+    mJmidIsSupportHard = env->GetMethodID(jcls, "isSupportHard", "(Ljava/lang/String;)Z");
+    mJmidDecodeAVPacket = env->GetMethodID(jcls, "decodeAVPacket", "(I[B)V");
+    mJmidReleaseMediaCodec = env->GetMethodID(jcls, "releaseMediaCodec", "()V");
+    mJfidIsSoftOnly = env->GetFieldID(jcls, "isSoftOnly", "Z");
 }
 
 CallJava::~CallJava() {
@@ -71,45 +69,6 @@ void CallJava::sendMsg(bool isMain, int type, int data) {
     }
 }
 
-void
-CallJava::setFrameData(bool isMain, int width, int height, uint8_t *fy, uint8_t *fu, uint8_t *fv) {
-    JNIEnv *jniEnv;
-    if (!isMain) {
-        if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
-            LOGE("CallJava::sendMsg AttachCurrentThread ERROR ")
-            return;
-        }
-    } else {
-        jniEnv = mEnv;
-    }
-
-    jbyteArray y = jniEnv->NewByteArray(width * height);
-    jniEnv->SetByteArrayRegion(y, 0, width * height, reinterpret_cast<const jbyte *>(fy));
-
-    jbyteArray u = jniEnv->NewByteArray(width * height / 4);
-    jniEnv->SetByteArrayRegion(u, 0, width * height / 4, reinterpret_cast<const jbyte *>(fu));
-
-    jbyteArray v = jniEnv->NewByteArray(width * height / 4);
-    jniEnv->SetByteArrayRegion(v, 0, width * height / 4, reinterpret_cast<const jbyte *>(fv));
-
-    jniEnv->CallVoidMethod(mObj, mJmidSetFrameData, width, height, y, u, v);
-
-    jniEnv->DeleteLocalRef(y);
-    jniEnv->DeleteLocalRef(u);
-    jniEnv->DeleteLocalRef(v);
-
-    if (!isMain) {
-        mVm->DetachCurrentThread();
-    }
-}
-
-void CallJava::setCodecType(int type) {
-    JNIEnv *env = NULL;
-    mVm->AttachCurrentThread(&env, 0);
-    env->CallVoidMethod(mObj, mJmidSetCodeType, type);
-    mVm->DetachCurrentThread();
-}
-
 bool CallJava::isSoftOnly(bool isMain) {
     JNIEnv *jniEnv;
     if (!isMain) {
@@ -128,6 +87,26 @@ bool CallJava::isSoftOnly(bool isMain) {
     }
 
     return isSoftOnly;
+}
+
+jobject CallJava::getSurface(bool isMain) {
+    JNIEnv *jniEnv;
+    if (!isMain) {
+        if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
+            LOGE("CallJava::sendMsg AttachCurrentThread ERROR ")
+            return NULL;
+        }
+    } else {
+        jniEnv = mEnv;
+    }
+    jfieldID fid = jniEnv->GetFieldID(jniEnv->GetObjectClass(mObj), "mSurface", "Landroid/view/Surface;");
+    jobject obj = jniEnv->GetObjectField(mObj, fid);
+
+    if (!isMain) {
+        mVm->DetachCurrentThread();
+    }
+
+    return obj;
 }
 
 int

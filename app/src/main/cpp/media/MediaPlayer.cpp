@@ -2,6 +2,7 @@
 // Created by 宋林涛 on 2018/10/22.
 //
 
+#include <android/native_window_jni.h>
 #include "MediaPlayer.h"
 
 #define MAX_QUEUE_SIZE (1024*1024)
@@ -9,6 +10,7 @@
 MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
     mHolder = new LifeSequenceHolder();
     mCallJava = new CallJava(pVM, pEnv, obj);
+    mNativeWindow = ANativeWindow_fromSurface(pEnv, mCallJava->getSurface(true));
 }
 
 void MediaPlayer::open(const char *url) {
@@ -237,6 +239,10 @@ void MediaPlayer::setClock(double clock) {
 
 double MediaPlayer::getClock() {
     return mClock;
+}
+
+ANativeWindow *MediaPlayer::getWindow() {
+    return mNativeWindow;
 }
 
 
