@@ -115,7 +115,7 @@ public:
 
     void drawYUV(int w, int h, void *y, void *u, void *v);
 
-    void drawMediaCodec();
+    void drawMediaCodec(JNIEnv *jniEnv);
 
     jobject getMediaCodecSurface();
 

@@ -31,6 +31,36 @@ SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
 
 }
 
+void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
+    //get display
+    eglDisp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    //init
+    EGLint eglMajvers, eglMinVers;
+    eglInitialize(eglDisp, &eglMajvers, &eglMinVers);
+    //choose config
+
+    EGLint numConfigs;
+    EGLint configSpec[] = {EGL_RED_SIZE, 8,
+                           EGL_GREEN_SIZE, 8,
+                           EGL_BLUE_SIZE, 8,
+                           EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_NONE};
+
+    eglChooseConfig(eglDisp, configSpec, &eglConf, 1, &numConfigs);
+
+    //create surface
+    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
+
+    //create contex
+    const EGLint ctxAttr[] = {
+            EGL_CONTEXT_CLIENT_VERSION, 2,
+            EGL_NONE
+    };
+    eglCtx = eglCreateContext(eglDisp, eglConf, EGL_NO_CONTEXT, ctxAttr);
+    //绑定到当前线程
+    eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
+}
+
+
 void SDLVideo::initYuvShader() {
     yuvProgramId = createProgram(vertexShaderString, fragmentShaderString);
 
@@ -120,7 +150,7 @@ void SDLVideo::createMediaSurface(GLuint textureId) {
     releaseJmid = env->GetMethodID(jcls, "release", "()V");
 
     jmethodID jmid = env->GetMethodID(jcls, "<init>", "(IJ)V");
-    mediaCodecSurface = env->NewObject(jcls, jmid, textureId, this);
+    mediaCodecSurface = env->NewGlobalRef(env->NewObject(jcls, jmid, textureId, this));
 }
 
 jobject SDLVideo::getMediaCodecSurface() {
@@ -129,10 +159,10 @@ jobject SDLVideo::getMediaCodecSurface() {
     return env->CallObjectMethod(mediaCodecSurface, jmid);
 }
 
-void SDLVideo::drawMediaCodec() {
+void SDLVideo::drawMediaCodec(JNIEnv *jniEnv) {
     glUseProgram(mediaCodecProgramId);
 
-    env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+    jniEnv->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
 
     glEnableVertexAttribArray(aPositionHandle_mediacodec);
     glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
@@ -145,36 +175,6 @@ void SDLVideo::drawMediaCodec() {
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
     glUniform1i(uTextureSamplerHandle_mediacodec, 0);
 }
-
-void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
-    //get display
-    eglDisp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    //init
-    EGLint eglMajvers, eglMinVers;
-    eglInitialize(eglDisp, &eglMajvers, &eglMinVers);
-    //choose config
-
-    EGLint numConfigs;
-    EGLint configSpec[] = {EGL_RED_SIZE, 8,
-                           EGL_GREEN_SIZE, 8,
-                           EGL_BLUE_SIZE, 8,
-                           EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_NONE};
-
-    eglChooseConfig(eglDisp, configSpec, &eglConf, 1, &numConfigs);
-
-    //create surface
-    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
-
-    //create contex
-    const EGLint ctxAttr[] = {
-            EGL_CONTEXT_CLIENT_VERSION, 2,
-            EGL_NONE
-    };
-    eglCtx = eglCreateContext(eglDisp, eglConf, EGL_NO_CONTEXT, ctxAttr);
-    //绑定到当前线程
-    eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
-}
-
 
 void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
     int width = ANativeWindow_getWidth(nativeWindow);
@@ -213,7 +213,6 @@ void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
 }
 
 SDLVideo::~SDLVideo() {
-    delete vm;
     //release opengl
     glDeleteTextures(1, &yTextureId);
     glDeleteTextures(1, &uTextureId);
@@ -231,8 +230,9 @@ SDLVideo::~SDLVideo() {
 
     //release jni
     env->CallVoidMethod(mediaCodecSurface, releaseJmid);
-    env->DeleteLocalRef(mediaCodecSurface);
+    env->DeleteGlobalRef(mediaCodecSurface);
     vm->DetachCurrentThread();
+    delete vm;
 }
 
 
