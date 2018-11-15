@@ -24,6 +24,7 @@ add_library( # Sets the name of the library.
         src/main/cpp/media/render/VideoRender.cpp
         src/main/cpp/media/sdl/SDLVideo.cpp
         src/main/cpp/media/sdl/shaderUtils.cpp
+        src/main/cpp/media/sdl/sdl_jni.cpp
         src/main/cpp/android/util.cpp
         )
 

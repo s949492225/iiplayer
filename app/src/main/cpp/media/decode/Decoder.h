@@ -6,6 +6,7 @@
 
 #include <thread>
 #include "../global/Status.h"
+#include "../sdl/SDLVideo.h"
 #include <cstdlib>
 extern "C" {
 #include "libavutil/time.h"
@@ -47,12 +48,12 @@ public:
 
 class HardVideoDecoder :public BaseDecoder{
 private:
+    SDLVideo *mSDLVideo;
     void init();
     void decode();
     double getPacketDiffTime(AVPacket *packet);
 public:
     HardVideoDecoder(MediaPlayer *player);
-
 };
 class VideoDecoder : public BaseDecoder {
 private:

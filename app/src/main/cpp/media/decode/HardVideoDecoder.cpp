@@ -10,7 +10,16 @@ HardVideoDecoder::HardVideoDecoder(MediaPlayer *player) : BaseDecoder(player) {
 }
 
 void HardVideoDecoder::init() {
+    start();
+}
+
+void HardVideoDecoder::decode() {
+    if (LOG_DEBUG) {
+        LOGD("视频[硬]解码线程开始,tid:%i\n", gettid())
+    }
+    mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC);
     int code = mPlayer->getCallJava()->initMediaCodec(false,
+                                                      mSDLVideo->getMediaCodecSurface(),
                                                       const_cast<char *>(mPlayer->getHolder()->mVideoCodecCtx->codec->name),
                                                       mPlayer->getWidth(),
                                                       mPlayer->getHeight(),
@@ -18,9 +27,7 @@ void HardVideoDecoder::init() {
                                                       mPlayer->getHolder()->mVideoCodecCtx->extradata_size,
                                                       mPlayer->getHolder()->mVideoCodecCtx->extradata,
                                                       mPlayer->getHolder()->mVideoCodecCtx->extradata);
-    if (code == 0) {
-        start();
-    } else {
+    if (code != 0) {
         if (code == -1) {
             mPlayer->sendMsg(false, ERROR_OPEN_HARD_CODEC);
         } else if (code == -2) {
@@ -28,13 +35,11 @@ void HardVideoDecoder::init() {
         } else if (code == -3) {
             mPlayer->sendMsg(false, ERROR_JNI);
         }
-    }
-}
 
-void HardVideoDecoder::decode() {
-    if (LOG_DEBUG) {
-        LOGD("视频解码线程开始,tid:%i\n", gettid())
+        delete mSDLVideo;
+        return;
     }
+
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         if (mPlayer->getStatus()->isSeek) {
             av_usleep(1000 * 10);
@@ -79,6 +84,8 @@ void HardVideoDecoder::decode() {
 
         ii_deletep(&packet);
     }
+
+    delete mSDLVideo;
 }
 
 double HardVideoDecoder::getPacketDiffTime(AVPacket *packet) {

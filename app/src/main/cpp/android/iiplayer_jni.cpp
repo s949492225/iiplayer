@@ -12,6 +12,7 @@ extern "C" {
 
 
 #define  IIMediaPlayer "com/syiyi/player/IIMediaPlayer"
+#define  MediaCodecSurface "com/syiyi/player/sdl/MediaCodecSurface"
 
 jfieldID get_player_native_player_field(JNIEnv *env) {
     jclass jcs = env->FindClass(IIMediaPlayer);
@@ -111,6 +112,7 @@ static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
 
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
+static jclass jcls_mediac_codec_surface = NULL;
 static const JNINativeMethod g_methods[] = {
         {"nativeOpen",    "(Ljava/lang/String;)V",                  (void *) nativeOpen},
         {"nativePlay",    "()V",                                    (void *) nativePlay},
@@ -131,6 +133,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
     }
 
     jclass cls = env->FindClass(IIMediaPlayer);
+    jcls_mediac_codec_surface = static_cast<jclass>(env->NewGlobalRef(
+            env->FindClass(MediaCodecSurface)));
+
+
     int ret = env->RegisterNatives(cls, g_methods, sizeof(g_methods) / sizeof(g_methods[0]));
     if (ret != JNI_OK) {
         __android_log_print(ANDROID_LOG_ERROR, "iiplayer_jni", "ERROR :RegisterNative failed\n");
@@ -148,8 +154,14 @@ JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved) {
     JNIEnv *env = get_jni_env();
     jclass cls = env->FindClass(IIMediaPlayer);
     env->UnregisterNatives(cls);
+    env->DeleteLocalRef(cls);
 
+    env->DeleteGlobalRef(jcls_mediac_codec_surface);
     g_jvm = NULL;
+}
+
+JNIEXPORT jclass get_mediacodec_surface(void) {
+    return jcls_mediac_codec_surface;
 }
 
 

@@ -21,7 +21,7 @@ void VideoRender::play() {
 
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
-    mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow());
+    mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL);
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         AVFrame *frame = mQueue->getFrame();
         if (frame != NULL) {

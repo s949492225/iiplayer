@@ -5,11 +5,13 @@ import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.Message;
 import android.view.Surface;
+
 import com.syiyi.player.listener.OnBufferTimeListener;
 import com.syiyi.player.listener.OnErrorListener;
 import com.syiyi.player.listener.OnPrepareListener;
 import com.syiyi.player.listener.OnPlayTimeListener;
 import com.syiyi.player.listener.OnSeekCompleteListener;
+
 import java.nio.ByteBuffer;
 
 
@@ -279,7 +281,8 @@ public class IIMediaPlayer {
         return VideoSupportUtil.isSupportCodec(codecName);
     }
 
-    private int initMediaCodec(String codeName, int width, int height, byte[] csd0, byte[] csd1) {
+    private int initMediaCodec(Surface surface, String codeName, int width, int height, byte[] csd0, byte[] csd1) {
+        setSurface(surface);
         if (mSurface != null) {
             try {
                 String mime = VideoSupportUtil.findVideoCodecName(codeName);

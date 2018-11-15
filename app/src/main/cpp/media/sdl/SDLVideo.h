@@ -66,30 +66,67 @@ private:
             }
     );
 
+    const char *fragmentMediaCodecShaderString = GET_STR(
+            ##extension GL_OES_EGL_image_external : require
+            precision mediump float;
+            varying vec2 v_texPo;
+            uniform samplerExternalOES sTexture;
+
+            void main() {
+            //黑白滤镜 关闭
+            gl_FragColor=texture2D(sTexture, v_texPo);
+            //    lowp vec4 textureColor = texture2D(sTexture, v_texPo);
+            //    float gray = textureColor.r * 0.299 + textureColor.g * 0.587 + textureColor.b * 0.114;
+            //    gl_FragColor = vec4(gray, gray, gray, textureColor.w);
+    }
+    );
+
     GLuint yTextureId;
     GLuint uTextureId;
     GLuint vTextureId;
 
-    GLuint programId;
+    GLuint yuvProgramId;
+    //mdeiacodec
+    GLuint mediaCodecProgramId;
+    GLuint mediaCodecTextureId;
+    GLuint aPositionHandle_mediacodec;
+    GLuint aTextureCoordHandle_mediacodec;
+    GLuint uTextureSamplerHandle_mediacodec;
 
+    //egl
     EGLConfig eglConf;
     EGLSurface eglSurface;
     EGLContext eglCtx;
     EGLDisplay eglDisp;
-
+    //jni
     JavaVM *vm;
+    JNIEnv *env;
     ANativeWindow *nativeWindow;
+    jobject mediaCodecSurface;
+    jmethodID updateTextureJmid;
+    jmethodID releaseJmid;
+
     int renderType;
+
 public:
-    SDLVideo(JavaVM *vm, ANativeWindow *window);
+    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType);
 
     ~SDLVideo();
 
+    void drawYUV(int w, int h, void *y, void *u, void *v);
+
+    void drawMediaCodec();
+
+    jobject getMediaCodecSurface();
+
+private:
     void initEGL(ANativeWindow *nativeWindow);
 
-    void initOpenGL();
+    void initYuvShader();
 
-    void drawYUV(int w, int h, void *y, void *u, void *v);
+    void initMediaCodecShader();
+
+    void createMediaSurface(GLuint textureId);
 
 };
 

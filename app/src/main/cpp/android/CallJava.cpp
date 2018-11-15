@@ -11,7 +11,7 @@ CallJava::CallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     mObj = mEnv->NewGlobalRef(obj);
     jclass jcls = env->GetObjectClass(obj);
     mJmidSendMsg = env->GetMethodID(jcls, "sendMessage", "(Landroid/os/Message;)V");
-    mJmidInitMediaCodec = env->GetMethodID(jcls, "initMediaCodec", "(Ljava/lang/String;II[B[B)I");
+    mJmidInitMediaCodec = env->GetMethodID(jcls, "initMediaCodec", "(Landroid/view/Surface;Ljava/lang/String;II[B[B)I");
     mJmidIsSupportHard = env->GetMethodID(jcls, "isSupportHard", "(Ljava/lang/String;)Z");
     mJmidDecodeAVPacket = env->GetMethodID(jcls, "decodeAVPacket", "(I[B)V");
     mJmidReleaseMediaCodec = env->GetMethodID(jcls, "releaseMediaCodec", "()V");
@@ -99,7 +99,8 @@ jobject CallJava::getSurface(bool isMain) {
     } else {
         jniEnv = mEnv;
     }
-    jfieldID fid = jniEnv->GetFieldID(jniEnv->GetObjectClass(mObj), "mSurface", "Landroid/view/Surface;");
+    jfieldID fid = jniEnv->GetFieldID(jniEnv->GetObjectClass(mObj), "mSurface",
+                                      "Landroid/view/Surface;");
     jobject obj = jniEnv->GetObjectField(mObj, fid);
 
     if (!isMain) {
@@ -110,7 +111,8 @@ jobject CallJava::getSurface(bool isMain) {
 }
 
 int
-CallJava::initMediaCodec(bool isMain, char *codecName, int width, int height, int csd_0_size,
+CallJava::initMediaCodec(bool isMain, jobject surface, char *codecName, int width, int height,
+                         int csd_0_size,
                          int csd_1_size, uint8_t *csd_0, uint8_t *csd_1) {
     JNIEnv *jniEnv;
     if (!isMain) {
@@ -127,7 +129,8 @@ CallJava::initMediaCodec(bool isMain, char *codecName, int width, int height, in
     jbyteArray csd1 = jniEnv->NewByteArray(csd_1_size);
     jniEnv->SetByteArrayRegion(csd1, 0, csd_1_size, (jbyte *) csd_1);
     jstring name = jniEnv->NewStringUTF(codecName);
-    int ret = jniEnv->CallIntMethod(mObj, mJmidInitMediaCodec, name, width, height, csd0, csd1);
+    int ret = jniEnv->CallIntMethod(mObj, mJmidInitMediaCodec, surface, name, width, height, csd0,
+                                    csd1);
 
     jniEnv->DeleteLocalRef(name);
     jniEnv->DeleteLocalRef(csd0);

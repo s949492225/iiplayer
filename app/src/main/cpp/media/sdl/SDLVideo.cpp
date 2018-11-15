@@ -6,37 +6,47 @@
 #include "SDLVideo.h"
 #include "shaderUtils.h"
 #include "../../android/android_log.h"
+#include "../../android/iiplayer_jni.h"
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
 
-SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window) {
+SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
+    this->renderType = renderType;
     //jni-----------------------------------------------------------------------------------
     this->vm = vm;
+    if (this->vm->AttachCurrentThread(&env, 0) != JNI_OK) {
+        LOGE("SDLVideo AttachCurrentThread ERROR ")
+        return;
+    }
     //get window
     nativeWindow = window;
     //egl-----------------------------------------------------------------------------------
     initEGL(nativeWindow);
     //opengl
-    initOpenGL();
+    if (this->renderType == RENDER_TYPE_OPEN_GL) {
+        initYuvShader();
+    } else {
+        initMediaCodecShader();
+    }
 
 }
 
-void SDLVideo::initOpenGL() {
-    programId = createProgram(vertexShaderString, fragmentShaderString);
+void SDLVideo::initYuvShader() {
+    yuvProgramId = createProgram(vertexShaderString, fragmentShaderString);
 
-    GLuint aPositionHandle = (GLuint) glGetAttribLocation(programId, "aPosition");
-    GLuint aTextureCoordHandle = (GLuint) glGetAttribLocation(programId, "aTexCoord");
+    GLuint aPositionHandle = (GLuint) glGetAttribLocation(yuvProgramId, "aPosition");
+    GLuint aTextureCoordHandle = (GLuint) glGetAttribLocation(yuvProgramId, "aTexCoord");
 
-    GLuint textureSamplerHandleY = (GLuint) glGetUniformLocation(programId, "yTexture");
-    GLuint textureSamplerHandleU = (GLuint) glGetUniformLocation(programId, "uTexture");
-    GLuint textureSamplerHandleV = (GLuint) glGetUniformLocation(programId, "vTexture");
+    GLuint textureSamplerHandleY = (GLuint) glGetUniformLocation(yuvProgramId, "yTexture");
+    GLuint textureSamplerHandleU = (GLuint) glGetUniformLocation(yuvProgramId, "uTexture");
+    GLuint textureSamplerHandleV = (GLuint) glGetUniformLocation(yuvProgramId, "vTexture");
 
     int width = ANativeWindow_getWidth(nativeWindow);
     int height = ANativeWindow_getHeight(nativeWindow);
 
     glViewport(0, 0, width, height);
 
-    glUseProgram(programId);
+    glUseProgram(yuvProgramId);
     glEnableVertexAttribArray(aPositionHandle);
 
     glVertexAttribPointer(aPositionHandle, 3, GL_FLOAT, GL_FALSE,
@@ -75,6 +85,67 @@ void SDLVideo::initOpenGL() {
     glUniform1i(textureSamplerHandleV, 2);
 }
 
+void SDLVideo::initMediaCodecShader() {
+    mediaCodecProgramId = createProgram(vertexShaderString, fragmentMediaCodecShaderString);
+    aPositionHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId,
+                                                              "av_Position");
+    aTextureCoordHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId,
+                                                                  "af_Position");
+
+    uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId,
+                                                                     "sTexture");
+
+    int width = ANativeWindow_getWidth(nativeWindow);
+    int height = ANativeWindow_getHeight(nativeWindow);
+
+    glViewport(0, 0, width, height);
+
+    glUseProgram(yuvProgramId);
+
+    glGenTextures(1, &mediaCodecTextureId);
+
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
+
+    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER,
+                    GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER,
+                    GL_LINEAR);
+    createMediaSurface(mediaCodecTextureId);
+}
+
+void SDLVideo::createMediaSurface(GLuint textureId) {
+    jclass jcls = get_mediacodec_surface();
+
+    updateTextureJmid = env->GetMethodID(jcls, "update", "()V");
+    releaseJmid = env->GetMethodID(jcls, "release", "()V");
+
+    jmethodID jmid = env->GetMethodID(jcls, "<init>", "(IJ)V");
+    mediaCodecSurface = env->NewObject(jcls, jmid, textureId, this);
+}
+
+jobject SDLVideo::getMediaCodecSurface() {
+    jclass jcls = get_mediacodec_surface();
+    jmethodID jmid = env->GetMethodID(jcls, "getSurface", "()Landroid/view/Surface;");
+    return env->CallObjectMethod(mediaCodecSurface, jmid);
+}
+
+void SDLVideo::drawMediaCodec() {
+    glUseProgram(mediaCodecProgramId);
+
+    env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+
+    glEnableVertexAttribArray(aPositionHandle_mediacodec);
+    glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
+                          12, vertexData);
+    glEnableVertexAttribArray(aTextureCoordHandle_mediacodec);
+    glVertexAttribPointer(aTextureCoordHandle_mediacodec, 2, GL_FLOAT, GL_FALSE, 8,
+                          textureVertexData);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
+    glUniform1i(uTextureSamplerHandle_mediacodec, 0);
+}
+
 void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
     //get display
     eglDisp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -103,6 +174,7 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
     //绑定到当前线程
     eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
 }
+
 
 void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
     int width = ANativeWindow_getWidth(nativeWindow);
@@ -146,7 +218,7 @@ SDLVideo::~SDLVideo() {
     glDeleteTextures(1, &yTextureId);
     glDeleteTextures(1, &uTextureId);
     glDeleteTextures(1, &vTextureId);
-    glDeleteProgram(programId);
+    glDeleteProgram(yuvProgramId);
     //release egl
     eglMakeCurrent(eglDisp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroyContext(eglDisp, eglCtx);
@@ -156,6 +228,11 @@ SDLVideo::~SDLVideo() {
     eglDisp = EGL_NO_DISPLAY;
     eglSurface = EGL_NO_SURFACE;
     eglCtx = EGL_NO_CONTEXT;
+
+    //release jni
+    env->CallVoidMethod(mediaCodecSurface, releaseJmid);
+    env->DeleteLocalRef(mediaCodecSurface);
+    vm->DetachCurrentThread();
 }
 
 
