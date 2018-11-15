@@ -125,12 +125,19 @@ void SDLVideo::initMediaCodecShader() {
     uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId,
                                                                      "sTexture");
 
+    glEnableVertexAttribArray(aPositionHandle_mediacodec);
+    glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
+                          12, vertexData);
+    glEnableVertexAttribArray(aTextureCoordHandle_mediacodec);
+    glVertexAttribPointer(aTextureCoordHandle_mediacodec, 2, GL_FLOAT, GL_FALSE, 8,
+                          textureVertexData);
+
     int width = ANativeWindow_getWidth(nativeWindow);
     int height = ANativeWindow_getHeight(nativeWindow);
 
     glViewport(0, 0, width, height);
 
-    glUseProgram(yuvProgramId);
+    glUseProgram(mediaCodecProgramId);
 
     glGenTextures(1, &mediaCodecTextureId);
 
@@ -160,16 +167,7 @@ jobject SDLVideo::getMediaCodecSurface() {
 }
 
 void SDLVideo::drawMediaCodec(JNIEnv *jniEnv) {
-    glUseProgram(mediaCodecProgramId);
-
     jniEnv->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
-
-    glEnableVertexAttribArray(aPositionHandle_mediacodec);
-    glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
-                          12, vertexData);
-    glEnableVertexAttribArray(aTextureCoordHandle_mediacodec);
-    glVertexAttribPointer(aTextureCoordHandle_mediacodec, 2, GL_FLOAT, GL_FALSE, 8,
-                          textureVertexData);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
