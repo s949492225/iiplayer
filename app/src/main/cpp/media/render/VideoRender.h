@@ -19,7 +19,6 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libavutil/time.h>
 }
-
 class MediaPlayer;
 
 class VideoRender {
@@ -34,12 +33,19 @@ private:
     AVRational mTimebase;
     std::thread *mPlayThread = NULL;
     SDLVideo *mSDLVideo = NULL;
+    pthread_mutex_t mMutex;
+    pthread_cond_t mCond;
+    bool isHand= false;
 
     double getFrameDiffTime(AVFrame *avFrame);
 
+    void renderOpenGL();
+
+    void renderMediaCodec();
+
 public:
 
-    VideoRender(MediaPlayer *player);
+    VideoRender(MediaPlayer *player, bool isHard);
 
     ~VideoRender();
 
@@ -56,6 +62,8 @@ public:
     void notifyWait();
 
     AVFrame *scale(AVFrame *frame);
+
+    void onTextureReady();
 };
 
 

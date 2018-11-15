@@ -10,7 +10,8 @@
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
 
-SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
+SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType, onTextureReady callBack) {
+    mReadyCallBack = callBack;
     this->renderType = renderType;
     //jni-----------------------------------------------------------------------------------
     this->vm = vm;
@@ -166,9 +167,14 @@ jobject SDLVideo::getMediaCodecSurface() {
     return env->CallObjectMethod(mediaCodecSurface, jmid);
 }
 
-void SDLVideo::drawMediaCodec(JNIEnv *jniEnv) {
-    jniEnv->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+void SDLVideo::onFrameAvailable() {
+    if (mReadyCallBack != NULL) {
+        mReadyCallBack();
+    }
+}
 
+void SDLVideo::drawMediaCodec() {
+    env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
     glUniform1i(uTextureSamplerHandle_mediacodec, 0);

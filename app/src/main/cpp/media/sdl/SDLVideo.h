@@ -13,6 +13,7 @@
 #define GET_STR(x) #x
 #define RENDER_TYPE_OPEN_GL 0
 #define RENDER_TYPE_MEDIA_CODEC 1
+typedef void (*onTextureReady)();
 
 class SDLVideo {
 private:
@@ -93,6 +94,8 @@ private:
     GLuint aTextureCoordHandle_mediacodec;
     GLuint uTextureSamplerHandle_mediacodec;
 
+    onTextureReady mReadyCallBack;
+
     //egl
     EGLConfig eglConf;
     EGLSurface eglSurface;
@@ -109,13 +112,15 @@ private:
     int renderType;
 
 public:
-    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType);
+    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType,onTextureReady callBack);
 
     ~SDLVideo();
 
     void drawYUV(int w, int h, void *y, void *u, void *v);
 
-    void drawMediaCodec(JNIEnv *jniEnv);
+    void onFrameAvailable();
+
+    void drawMediaCodec();
 
     jobject getMediaCodecSurface();
 
@@ -127,6 +132,7 @@ private:
     void initMediaCodecShader();
 
     void createMediaSurface(GLuint textureId);
+
 
 };
 

@@ -5,13 +5,16 @@
 #import "../MediaPlayer.h"
 #include <cstdlib>
 
-VideoRender::VideoRender(MediaPlayer *player) {
+VideoRender::VideoRender(MediaPlayer *player, bool is_Hard) {
+    this->isHand = is_Hard;
     mPlayer = player;
     mPixFmt = mPlayer->getHolder()->mVideoCodecCtx->pix_fmt;
     mWidth = mPlayer->getWidth();
     mHeight = mPlayer->getHeight();
     mTimebase = mPlayer->getHolder()->getVideoTimeBase();
     mQueue = new FrameQueue(mPlayer->getStatus(), const_cast<char *>("video"));
+    pthread_mutex_init(&mMutex, NULL);
+    pthread_cond_init(&mCond, NULL);
 
 }
 
@@ -19,9 +22,21 @@ void VideoRender::play() {
     mPlayThread = new std::thread(std::bind(&VideoRender::playThread, this));
 }
 
+
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
-    mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL);
+    if (!isHand) {
+        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL,
+                                 VideoRender::onTextureReady);
+        renderOpenGL();
+    } else {
+        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL, NULL);
+        renderMediaCodec();
+    }
+    delete mSDLVideo;
+}
+
+void VideoRender::renderOpenGL() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
         AVFrame *frame = mQueue->getFrame();
         if (frame != NULL) {
@@ -39,7 +54,7 @@ void VideoRender::playThread() {
 
             if (!mPlayer->getStatus()->isPause && diff < -0.01) {
                 int sleep = -(int) (diff * 1000);
-                if (std::abs(sleep) > 50) {
+                if (abs(sleep) > 50) {
                     sleep = 50;
                 }
                 av_usleep(static_cast<unsigned int>(sleep * 1000));
@@ -56,9 +71,18 @@ void VideoRender::playThread() {
             av_frame_free(&yuvFrame);
         }
     }
+}
 
-    delete mSDLVideo;
 
+void VideoRender::onTextureReady() {
+    pthread_cond_broadcast(&mCond);
+}
+
+void VideoRender::renderMediaCodec() {
+    while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
+        pthread_cond_wait(&mCond, &mMutex);
+        mSDLVideo->drawMediaCodec();
+    }
 }
 
 AVFrame *VideoRender::scale(AVFrame *frame) {
@@ -144,10 +168,12 @@ VideoRender::~VideoRender() {
     if (mPlayThread != NULL) {
         mPlayThread->join();
         mPlayThread = NULL;
+        pthread_mutex_destroy(&mMutex);
+        pthread_cond_destroy(&mCond);
     }
-
     if (mQueue != NULL) {
         delete mQueue;
         mQueue = NULL;
     }
 }
+
