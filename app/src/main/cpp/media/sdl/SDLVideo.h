@@ -115,7 +115,7 @@ private:
     void createMediaSurface(GLuint textureId);
 
 
-    void gl_log_check() const;
+    void gl_log_check(const char *tag);
 };
 
 

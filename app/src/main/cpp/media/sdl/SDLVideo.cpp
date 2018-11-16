@@ -9,6 +9,7 @@
 #include "../../android/iiplayer_jni.h"
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
+#include <unistd.h>
 
 SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType,
                    std::function<void()> callBack) {
@@ -120,15 +121,17 @@ void SDLVideo::initYuvShader() {
 void SDLVideo::initMediaCodecShader() {
     mediaCodecProgramId = createProgram(vertex_base_glsl, fragmen_mediacodec_glsl);
 
-    gl_log_check();
-
     aPositionHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId, "av_Position");
-    aTextureCoordHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId, "af_Position");
-    uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId, "sTexture");
+    aTextureCoordHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId,
+                                                                  "af_Position");
+    uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId,
+                                                                     "sTexture");
 
     glGenTextures(1, &mediaCodecTextureId);
+    gl_log_check("glGenTextures");
 
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
+    gl_log_check("glBindTexture");
 
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -136,10 +139,10 @@ void SDLVideo::initMediaCodecShader() {
     createMediaSurface(mediaCodecTextureId);
 }
 
-void SDLVideo::gl_log_check() const {
+void SDLVideo::gl_log_check(const char *msg) {
     GLenum error;
     if ((error = glGetError()) != GL_NO_ERROR) {
-        LOGE("opengl glGetError %i", error);
+        LOGE("opengl %s code: %i", msg, error);
     }
 }
 
@@ -150,7 +153,11 @@ void SDLVideo::createMediaSurface(GLuint textureId) {
     releaseJmid = env->GetMethodID(jcls, "release", "()V");
 
     jmethodID jmid = env->GetMethodID(jcls, "<init>", "(IJ)V");
-    mediaCodecSurface = env->NewGlobalRef(env->NewObject(jcls, jmid, textureId, this));
+    jobject obj = env->NewObject(jcls, jmid, textureId, this);
+    mediaCodecSurface = env->NewGlobalRef(obj);
+    env->DeleteLocalRef(obj);
+
+    usleep(20 * 1000);
 }
 
 jobject SDLVideo::getMediaCodecSurface(JNIEnv *jniEnv) {
