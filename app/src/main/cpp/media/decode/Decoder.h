@@ -8,6 +8,7 @@
 #include "../global/Status.h"
 #include "../sdl/SDLVideo.h"
 #include <cstdlib>
+
 extern "C" {
 #include "libavutil/time.h"
 #include "libavcodec/avcodec.h"
@@ -26,35 +27,47 @@ protected:
     PacketQueue *mQueue = NULL;
 
     virtual void start();
+
     virtual void decode() = 0;
+
 public:
     BaseDecoder(MediaPlayer *player);
+
     virtual ~BaseDecoder();
+
     void putPacket(Packet *packet);
+
     void clearQueue();
+
     void notifyWait();
+
     int getQueueSize();
+
     virtual void init() = 0;
 };
 
-class AudioDecoder:public BaseDecoder {
+class AudioDecoder : public BaseDecoder {
 private:
     void init();
+
     void decode();
 
 public:
     AudioDecoder(MediaPlayer *player);
 };
 
-class HardVideoDecoder :public BaseDecoder{
+class HardVideoDecoder : public BaseDecoder {
 private:
-    SDLVideo *mSDLVideo;
     void init();
+
     void decode();
+
     double getPacketDiffTime(AVPacket *packet);
+
 public:
     HardVideoDecoder(MediaPlayer *player);
 };
+
 class VideoDecoder : public BaseDecoder {
 private:
     void init();

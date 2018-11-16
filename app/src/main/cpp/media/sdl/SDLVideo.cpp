@@ -10,7 +10,8 @@
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
 
-SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType, onTextureReady callBack) {
+SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType,
+                   std::function<void()> callBack) {
     mReadyCallBack = callBack;
     this->renderType = renderType;
     //jni-----------------------------------------------------------------------------------
@@ -161,10 +162,10 @@ void SDLVideo::createMediaSurface(GLuint textureId) {
     mediaCodecSurface = env->NewGlobalRef(env->NewObject(jcls, jmid, textureId, this));
 }
 
-jobject SDLVideo::getMediaCodecSurface() {
+jobject SDLVideo::getMediaCodecSurface(JNIEnv *jniEnv) {
     jclass jcls = get_mediacodec_surface();
-    jmethodID jmid = env->GetMethodID(jcls, "getSurface", "()Landroid/view/Surface;");
-    return env->CallObjectMethod(mediaCodecSurface, jmid);
+    jmethodID jmid = jniEnv->GetMethodID(jcls, "getSurface", "()Landroid/view/Surface;");
+    return jniEnv->CallObjectMethod(mediaCodecSurface, jmid);
 }
 
 void SDLVideo::onFrameAvailable() {
@@ -236,7 +237,6 @@ SDLVideo::~SDLVideo() {
     env->CallVoidMethod(mediaCodecSurface, releaseJmid);
     env->DeleteGlobalRef(mediaCodecSurface);
     vm->DetachCurrentThread();
-    delete vm;
 }
 
 

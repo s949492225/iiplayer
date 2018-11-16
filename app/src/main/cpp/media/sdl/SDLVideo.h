@@ -9,11 +9,11 @@
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
 #include <jni.h>
+#include <functional>
 
 #define GET_STR(x) #x
 #define RENDER_TYPE_OPEN_GL 0
 #define RENDER_TYPE_MEDIA_CODEC 1
-typedef void (*onTextureReady)();
 
 class SDLVideo {
 private:
@@ -94,7 +94,7 @@ private:
     GLuint aTextureCoordHandle_mediacodec;
     GLuint uTextureSamplerHandle_mediacodec;
 
-    onTextureReady mReadyCallBack;
+    std::function<void()> mReadyCallBack;
 
     //egl
     EGLConfig eglConf;
@@ -112,7 +112,7 @@ private:
     int renderType;
 
 public:
-    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType,onTextureReady callBack);
+    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType, std::function<void()> callBack);
 
     ~SDLVideo();
 
@@ -122,7 +122,7 @@ public:
 
     void drawMediaCodec();
 
-    jobject getMediaCodecSurface();
+    jobject getMediaCodecSurface(JNIEnv *jniEnv);
 
 private:
     void initEGL(ANativeWindow *nativeWindow);

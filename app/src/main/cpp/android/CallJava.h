@@ -33,11 +33,11 @@ public:
 
     bool isSupportHard(bool isMain, const char *codecName);
 
-    int initMediaCodec(bool isMain, jobject surface, char *codecName, int width, int height,
+    int initMediaCodec(JNIEnv *jniEnv, jobject surface, char *codecName, int width, int height,
                        int csd_0_size,
                        int csd_1_size, uint8_t *csd_0, uint8_t *csd_1);
 
-    void decodeAVPacket(bool isMain, int size, uint8_t *data);
+    void decodeAVPacket(JNIEnv *jniEnv, int size, uint8_t *data);
 
     void release(bool isMain);
 

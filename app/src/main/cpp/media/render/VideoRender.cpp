@@ -13,8 +13,11 @@ VideoRender::VideoRender(MediaPlayer *player, bool is_Hard) {
     mHeight = mPlayer->getHeight();
     mTimebase = mPlayer->getHolder()->getVideoTimeBase();
     mQueue = new FrameQueue(mPlayer->getStatus(), const_cast<char *>("video"));
-    pthread_mutex_init(&mMutex, NULL);
-    pthread_cond_init(&mCond, NULL);
+    pthread_mutex_init(&mRenderMutex, NULL);
+    pthread_cond_init(&mRenderCond, NULL);
+
+    pthread_mutex_init(&mGetSurfaseMutex, NULL);
+    pthread_cond_init(&mGetSurfaceCond, NULL);
 
 }
 
@@ -27,10 +30,19 @@ void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
     if (!isHand) {
         mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL,
-                                 VideoRender::onTextureReady);
+                                 [this] {
+                                     this->onTextureReady();
+                                 });
         renderOpenGL();
     } else {
-        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL, NULL);
+        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC,
+                                 [] {});
+        //唤醒hardDecoder getSurface
+        pthread_mutex_lock(&mGetSurfaseMutex);
+        inited = 1;
+        pthread_cond_broadcast(&mGetSurfaceCond);
+        pthread_mutex_unlock(&mGetSurfaseMutex);
+
         renderMediaCodec();
     }
     delete mSDLVideo;
@@ -75,12 +87,15 @@ void VideoRender::renderOpenGL() {
 
 
 void VideoRender::onTextureReady() {
-    pthread_cond_broadcast(&mCond);
+    pthread_cond_broadcast(&mRenderCond);
 }
 
 void VideoRender::renderMediaCodec() {
     while (mPlayer->getStatus() != NULL && !mPlayer->getStatus()->isExit) {
-        pthread_cond_wait(&mCond, &mMutex);
+        pthread_cond_wait(&mRenderCond, &mRenderMutex);
+        if (mPlayer->getStatus()->isExit) {
+            break;
+        }
         mSDLVideo->drawMediaCodec();
     }
 }
@@ -165,15 +180,39 @@ void VideoRender::notifyWait() {
 }
 
 VideoRender::~VideoRender() {
+
     if (mPlayThread != NULL) {
+
+        pthread_cond_broadcast(&mRenderCond);
+        pthread_cond_broadcast(&mGetSurfaceCond);
+
         mPlayThread->join();
         mPlayThread = NULL;
-        pthread_mutex_destroy(&mMutex);
-        pthread_cond_destroy(&mCond);
+
+        pthread_mutex_destroy(&mRenderMutex);
+        pthread_cond_destroy(&mRenderCond);
+
+        pthread_mutex_destroy(&mGetSurfaseMutex);
+        pthread_cond_destroy(&mGetSurfaceCond);
     }
     if (mQueue != NULL) {
         delete mQueue;
         mQueue = NULL;
     }
+}
+
+jobject VideoRender::getMediaCodecSurface(JNIEnv *pEnv) {
+
+    pthread_mutex_lock(&mGetSurfaseMutex);
+    while (!inited && !mPlayer->getStatus()->isExit) {
+        pthread_cond_wait(&mGetSurfaceCond, &mGetSurfaseMutex);
+    }
+    pthread_mutex_unlock(&mGetSurfaseMutex);
+
+    if (mPlayer->getStatus()->isExit) {
+        return NULL;
+    }
+
+    return mSDLVideo->getMediaCodecSurface(pEnv);
 }
 

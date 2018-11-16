@@ -11,7 +11,8 @@ CallJava::CallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     mObj = mEnv->NewGlobalRef(obj);
     jclass jcls = env->GetObjectClass(obj);
     mJmidSendMsg = env->GetMethodID(jcls, "sendMessage", "(Landroid/os/Message;)V");
-    mJmidInitMediaCodec = env->GetMethodID(jcls, "initMediaCodec", "(Landroid/view/Surface;Ljava/lang/String;II[B[B)I");
+    mJmidInitMediaCodec = env->GetMethodID(jcls, "initMediaCodec",
+                                           "(Landroid/view/Surface;Ljava/lang/String;II[B[B)I");
     mJmidIsSupportHard = env->GetMethodID(jcls, "isSupportHard", "(Ljava/lang/String;)Z");
     mJmidDecodeAVPacket = env->GetMethodID(jcls, "decodeAVPacket", "(I[B)V");
     mJmidReleaseMediaCodec = env->GetMethodID(jcls, "releaseMediaCodec", "()V");
@@ -111,18 +112,9 @@ jobject CallJava::getSurface(bool isMain) {
 }
 
 int
-CallJava::initMediaCodec(bool isMain, jobject surface, char *codecName, int width, int height,
+CallJava::initMediaCodec(JNIEnv *jniEnv, jobject surface, char *codecName, int width, int height,
                          int csd_0_size,
                          int csd_1_size, uint8_t *csd_0, uint8_t *csd_1) {
-    JNIEnv *jniEnv;
-    if (!isMain) {
-        if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
-            LOGE("CallJava::sendMsg AttachCurrentThread ERROR ")
-            return -3;
-        }
-    } else {
-        jniEnv = mEnv;
-    }
 
     jbyteArray csd0 = jniEnv->NewByteArray(csd_0_size);
     jniEnv->SetByteArrayRegion(csd0, 0, csd_0_size, (jbyte *) csd_0);
@@ -135,10 +127,6 @@ CallJava::initMediaCodec(bool isMain, jobject surface, char *codecName, int widt
     jniEnv->DeleteLocalRef(name);
     jniEnv->DeleteLocalRef(csd0);
     jniEnv->DeleteLocalRef(csd1);
-
-    if (!isMain) {
-        mVm->DetachCurrentThread();
-    }
     return ret;
 }
 
@@ -166,25 +154,12 @@ bool CallJava::isSupportHard(bool isMain, const char *codecName) {
     return support;
 }
 
-void CallJava::decodeAVPacket(bool isMain, int size, uint8_t *src_data) {
-    JNIEnv *jniEnv;
-    if (!isMain) {
-        if (mVm->AttachCurrentThread(&jniEnv, 0) != JNI_OK) {
-            LOGE("CallJava::sendMsg AttachCurrentThread ERROR ")
-            return;
-        }
-    } else {
-        jniEnv = mEnv;
-    }
+void CallJava::decodeAVPacket(JNIEnv *jniEnv, int size, uint8_t *src_data) {
 
     jbyteArray data = jniEnv->NewByteArray(size);
     jniEnv->SetByteArrayRegion(data, 0, size, reinterpret_cast<const jbyte *>(src_data));
     jniEnv->CallVoidMethod(mObj, mJmidDecodeAVPacket, size, data);
     jniEnv->DeleteLocalRef(data);
-
-    if (!isMain) {
-        mVm->DetachCurrentThread();
-    }
 }
 
 void CallJava::release(bool isMain) {

@@ -33,9 +33,13 @@ private:
     AVRational mTimebase;
     std::thread *mPlayThread = NULL;
     SDLVideo *mSDLVideo = NULL;
-    pthread_mutex_t mMutex;
-    pthread_cond_t mCond;
+    pthread_mutex_t mRenderMutex;
+    pthread_cond_t mRenderCond;
     bool isHand= false;
+
+    pthread_mutex_t mGetSurfaseMutex;
+    pthread_cond_t mGetSurfaceCond;
+    int inited = 0;
 
     double getFrameDiffTime(AVFrame *avFrame);
 
@@ -56,6 +60,8 @@ public:
     void play();
 
     void playThread();
+
+    jobject getMediaCodecSurface(JNIEnv *pEnv);
 
     void clearQueue();
 

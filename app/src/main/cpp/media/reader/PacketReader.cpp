@@ -101,14 +101,13 @@ int PacketReader::prepare() {
     mPlayer->getAudioDecoder()->init();
     mPlayer->setAudioRender(new AudioRender(mPlayer));
 
+    mPlayer->setVideoRender(new VideoRender(mPlayer, isHardCodec()));
     if (isHardCodec()) {
         mPlayer->setVideoDecoder(new HardVideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
-        mPlayer->setVideoRender(new VideoRender(mPlayer, true));
     } else {
         mPlayer->setVideoDecoder(new VideoDecoder(mPlayer));
         mPlayer->getVideoDecoder()->init();
-        mPlayer->setVideoRender(new VideoRender(mPlayer, false));
     }
     return 0;
 }
