@@ -175,10 +175,16 @@ void SDLVideo::onFrameAvailable() {
 }
 
 void SDLVideo::drawMediaCodec() {
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0, 0, 0, 1);
+
     env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
     glUniform1i(uTextureSamplerHandle_mediacodec, 0);
+
+    eglSwapBuffers(eglDisp, eglSurface);
 }
 
 void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
@@ -234,8 +240,10 @@ SDLVideo::~SDLVideo() {
     eglCtx = EGL_NO_CONTEXT;
 
     //release jni
-    env->CallVoidMethod(mediaCodecSurface, releaseJmid);
-    env->DeleteGlobalRef(mediaCodecSurface);
+    if (renderType == RENDER_TYPE_MEDIA_CODEC) {
+        env->CallVoidMethod(mediaCodecSurface, releaseJmid);
+        env->DeleteGlobalRef(mediaCodecSurface);
+    }
     vm->DetachCurrentThread();
 }
 

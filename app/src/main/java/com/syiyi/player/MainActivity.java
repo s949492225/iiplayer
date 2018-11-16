@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
         tv_buffer_time = findViewById(R.id.tv_buffer_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
-        mPlayer.setSoftOnly(false);
+        mPlayer.setSoftOnly(true);
         mPlayer.setSurface(mVideoView.getHolder().getSurface());
 //        mPlayer.setDataSource("/sdcard/test.mp4");
         mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
