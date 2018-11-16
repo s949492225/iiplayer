@@ -11,17 +11,16 @@
 #include <jni.h>
 #include <functional>
 
-#define GET_STR(x) #x
 #define RENDER_TYPE_OPEN_GL 0
 #define RENDER_TYPE_MEDIA_CODEC 1
 
 class SDLVideo {
 private:
     const float *vertexData = new float[12]{
-            1.0f, -1.0f, 0.0f,
-            -1.0f, -1.0f, 0.0f,
-            1.0f, 1.0f, 0.0f,
-            -1.0f, 1.0f, 0.0f
+            1.0f,1.0f,0.0f,
+            -1.0f,1.0f,0.0f,
+            1.0f,-1.0f,0.0f,
+            -1.0f,-1.0f,0.0f
     };
 
     const float *textureVertexData = new float[8]{
@@ -31,57 +30,39 @@ private:
             0.0f, 1.0f//左上
     };
 
-    const char *vertexShaderString = GET_STR(
-            attribute
-            vec4 aPosition;
-            attribute
-            vec2 aTexCoord;
-            varying
-            vec2 vTexCoord;
-            void main() {
-                vTexCoord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
-                gl_Position = aPosition;
-            }
-    );
-    const char *fragmentShaderString = GET_STR(
-            precision
-            mediump float;
-            varying
-            vec2 vTexCoord;
-            uniform
-            sampler2D yTexture;
-            uniform
-            sampler2D uTexture;
-            uniform
-            sampler2D vTexture;
-            void main() {
-                vec3 yuv;
-                vec3 rgb;
-                yuv.r = texture2D(yTexture, vTexCoord).r;
-                yuv.g = texture2D(uTexture, vTexCoord).r - 0.5;
-                yuv.b = texture2D(vTexture, vTexCoord).r - 0.5;
-                rgb = mat3(1.0, 1.0, 1.0,
-                           0.0, -0.39465, 2.03211,
-                           1.13983, -0.58060, 0.0) * yuv;
-                gl_FragColor = vec4(rgb, 1.0);
-            }
-    );
+    const char *vertex_base_glsl = "attribute vec4 av_Position;\n"
+                                   "attribute vec2 af_Position;\n"
+                                   "varying vec2 v_texPo;\n"
+                                   "void main() {\n"
+                                   "    v_texPo = af_Position;\n"
+                                   "    gl_Position = av_Position;\n"
+                                   "}";
 
-    const char *fragmentMediaCodecShaderString = GET_STR(
-            ##extension GL_OES_EGL_image_external : require
-            precision mediump float;
-            varying vec2 v_texPo;
-            uniform samplerExternalOES sTexture;
-
-            void main() {
-            //黑白滤镜 关闭
-            gl_FragColor=texture2D(sTexture, v_texPo);
-            //    lowp vec4 textureColor = texture2D(sTexture, v_texPo);
-            //    float gray = textureColor.r * 0.299 + textureColor.g * 0.587 + textureColor.b * 0.114;
-            //    gl_FragColor = vec4(gray, gray, gray, textureColor.w);
-    }
-    );
-
+    const char *fragment_yuv_glsl = "precision mediump float;\n"
+                                    "varying vec2 v_texPo;\n"
+                                    "uniform sampler2D sampler_y;\n"
+                                    "uniform sampler2D sampler_u;\n"
+                                    "uniform sampler2D sampler_v;\n"
+                                    "void main() {\n"
+                                    "    float y,u,v;\n"
+                                    "    y = texture2D(sampler_y,v_texPo).x;\n"
+                                    "    u = texture2D(sampler_u,v_texPo).x- 128./255.;\n"
+                                    "    v = texture2D(sampler_v,v_texPo).x- 128./255.;\n"
+                                    "\n"
+                                    "    vec3 rgb;\n"
+                                    "    rgb.r = y + 1.403 * v;\n"
+                                    "    rgb.g = y - 0.344 * u - 0.714 * v;\n"
+                                    "    rgb.b = y + 1.770 * u;\n"
+                                    "    gl_FragColor = vec4(rgb,1);\n"
+                                    "}";
+    const char *fragmen_mediacodec_glsl = "#extension GL_OES_EGL_image_external : require\n"
+                                          "precision mediump float;\n"
+                                          "varying vec2 v_texPo;\n"
+                                          "uniform samplerExternalOES sTexture;\n"
+                                          "\n"
+                                          "void main() {\n"
+                                          "    gl_FragColor=texture2D(sTexture, v_texPo);\n"
+                                          "}";
     GLuint yTextureId;
     GLuint uTextureId;
     GLuint vTextureId;
@@ -134,6 +115,7 @@ private:
     void createMediaSurface(GLuint textureId);
 
 
+    void gl_log_check() const;
 };
 
 

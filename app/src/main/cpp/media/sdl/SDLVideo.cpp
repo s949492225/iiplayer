@@ -64,14 +64,14 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
 
 
 void SDLVideo::initYuvShader() {
-    yuvProgramId = createProgram(vertexShaderString, fragmentShaderString);
+    yuvProgramId = createProgram(vertex_base_glsl, fragment_yuv_glsl);
 
-    GLuint aPositionHandle = (GLuint) glGetAttribLocation(yuvProgramId, "aPosition");
-    GLuint aTextureCoordHandle = (GLuint) glGetAttribLocation(yuvProgramId, "aTexCoord");
+    GLuint aPositionHandle = (GLuint) glGetAttribLocation(yuvProgramId, "av_Position");
+    GLuint aTextureCoordHandle = (GLuint) glGetAttribLocation(yuvProgramId, "af_Position");
 
-    GLuint textureSamplerHandleY = (GLuint) glGetUniformLocation(yuvProgramId, "yTexture");
-    GLuint textureSamplerHandleU = (GLuint) glGetUniformLocation(yuvProgramId, "uTexture");
-    GLuint textureSamplerHandleV = (GLuint) glGetUniformLocation(yuvProgramId, "vTexture");
+    GLuint textureSamplerHandleY = (GLuint) glGetUniformLocation(yuvProgramId, "sampler_y");
+    GLuint textureSamplerHandleU = (GLuint) glGetUniformLocation(yuvProgramId, "sampler_u");
+    GLuint textureSamplerHandleV = (GLuint) glGetUniformLocation(yuvProgramId, "sampler_v");
 
     int width = ANativeWindow_getWidth(nativeWindow);
     int height = ANativeWindow_getHeight(nativeWindow);
@@ -118,38 +118,29 @@ void SDLVideo::initYuvShader() {
 }
 
 void SDLVideo::initMediaCodecShader() {
-    mediaCodecProgramId = createProgram(vertexShaderString, fragmentMediaCodecShaderString);
-    aPositionHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId,
-                                                              "av_Position");
-    aTextureCoordHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId,
-                                                                  "af_Position");
+    mediaCodecProgramId = createProgram(vertex_base_glsl, fragmen_mediacodec_glsl);
 
-    uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId,
-                                                                     "sTexture");
+    gl_log_check();
 
-    glEnableVertexAttribArray(aPositionHandle_mediacodec);
-    glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
-                          12, vertexData);
-    glEnableVertexAttribArray(aTextureCoordHandle_mediacodec);
-    glVertexAttribPointer(aTextureCoordHandle_mediacodec, 2, GL_FLOAT, GL_FALSE, 8,
-                          textureVertexData);
-
-    int width = ANativeWindow_getWidth(nativeWindow);
-    int height = ANativeWindow_getHeight(nativeWindow);
-
-    glViewport(0, 0, width, height);
-
-    glUseProgram(mediaCodecProgramId);
+    aPositionHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId, "av_Position");
+    aTextureCoordHandle_mediacodec = (GLuint) glGetAttribLocation(mediaCodecProgramId, "af_Position");
+    uTextureSamplerHandle_mediacodec = (GLuint) glGetUniformLocation(mediaCodecProgramId, "sTexture");
 
     glGenTextures(1, &mediaCodecTextureId);
 
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
 
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER,
-                    GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER,
-                    GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     createMediaSurface(mediaCodecTextureId);
+}
+
+void SDLVideo::gl_log_check() const {
+    GLenum error;
+    if ((error = glGetError()) != GL_NO_ERROR) {
+        LOGE("opengl glGetError %i", error);
+    }
 }
 
 void SDLVideo::createMediaSurface(GLuint textureId) {
@@ -176,10 +167,26 @@ void SDLVideo::onFrameAvailable() {
 
 void SDLVideo::drawMediaCodec() {
 
+    int width = ANativeWindow_getWidth(nativeWindow);
+    int height = ANativeWindow_getHeight(nativeWindow);
+
+    glViewport(0, 0, width, height);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0, 0, 0, 1);
 
+    glUseProgram(mediaCodecProgramId);
+
     env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+
+
+    glEnableVertexAttribArray(aPositionHandle_mediacodec);
+    glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
+                          12, vertexData);
+    glEnableVertexAttribArray(aTextureCoordHandle_mediacodec);
+    glVertexAttribPointer(aTextureCoordHandle_mediacodec, 2, GL_FLOAT, GL_FALSE, 8,
+                          textureVertexData);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
     glUniform1i(uTextureSamplerHandle_mediacodec, 0);

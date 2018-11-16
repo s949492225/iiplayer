@@ -190,7 +190,9 @@ public class GlRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameA
     {
         String vertexShader = ShaderUtils.readRawTextFile(context, R.raw.vertex_base);
         String fragmentShader = ShaderUtils.readRawTextFile(context, R.raw.fragment_mediacodec);
+
         programId_mediacodec = ShaderUtils.createProgram(vertexShader, fragmentShader);
+
         aPositionHandle_mediacodec= GLES20.glGetAttribLocation(programId_mediacodec,"av_Position");
         aTextureCoordHandle_mediacodec =GLES20.glGetAttribLocation(programId_mediacodec,"af_Position");
         uTextureSamplerHandle_mediacodec =GLES20.glGetUniformLocation(programId_mediacodec,"sTexture");
@@ -199,13 +201,14 @@ public class GlRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameA
         GLES20.glGenTextures(1, textures, 0);
 
         textureid_mediacodec = textures[0];
+
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureid_mediacodec);
         ShaderUtils.checkGlError("glBindTexture mTextureID");
 
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
-                GLES20.GL_NEAREST);
-        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
-                GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+
+
         surfaceTexture = new SurfaceTexture(textureid_mediacodec);
         surfaceTexture.setOnFrameAvailableListener(this);
         surface = new Surface(surfaceTexture);
@@ -223,6 +226,7 @@ public class GlRender implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameA
         GLES20.glUseProgram(programId_mediacodec);
         surfaceTexture.updateTexImage();
         vertexBuffer.position(0);
+
         GLES20.glEnableVertexAttribArray(aPositionHandle_mediacodec);
         GLES20.glVertexAttribPointer(aPositionHandle_mediacodec, 3, GLES20.GL_FLOAT, false,
                 12, vertexBuffer);
