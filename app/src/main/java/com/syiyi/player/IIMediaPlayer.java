@@ -29,6 +29,8 @@ public class IIMediaPlayer {
     private OnSeekCompleteListener mOnSeekCompleteListener;
 
     private Surface mSurface;
+    private Surface mNestedSurface;
+
     private MediaFormat mMediaFormat;
     private MediaCodec mMediaCodec;
     private MediaCodec.BufferInfo info;
@@ -282,7 +284,7 @@ public class IIMediaPlayer {
     }
 
     private int initMediaCodec(Surface surface, String codeName, int width, int height, byte[] csd0, byte[] csd1) {
-        setSurface(surface);
+        mNestedSurface = surface;
         if (mSurface != null) {
             try {
                 String mime = VideoSupportUtil.findVideoCodecName(codeName);
@@ -296,7 +298,7 @@ public class IIMediaPlayer {
                 mMediaCodec = MediaCodec.createDecoderByType(mime);
 
                 info = new MediaCodec.BufferInfo();
-                mMediaCodec.configure(mMediaFormat, mSurface, null, 0);
+                mMediaCodec.configure(mMediaFormat, mNestedSurface, null, 0);
                 mMediaCodec.start();
                 return 0;
             } catch (Exception e) {
@@ -309,7 +311,7 @@ public class IIMediaPlayer {
     }
 
     public void decodeAVPacket(int datasize, byte[] data) {
-        if (mSurface != null && datasize > 0 && data != null && mMediaCodec != null) {
+        if (mNestedSurface != null && datasize > 0 && data != null && mMediaCodec != null) {
             try {
                 int intputBufferIndex = mMediaCodec.dequeueInputBuffer(10);
                 if (intputBufferIndex >= 0) {

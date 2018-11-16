@@ -86,6 +86,7 @@ void HardVideoDecoder::decode() {
         }
 
         mPlayer->getCallJava()->decodeAVPacket(jniEnv, packet->pkt->size, packet->pkt->data);
+        mPlayer->getVideoRender()->onTextureReady();
 
         ii_deletep(&packet);
     }

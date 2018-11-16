@@ -75,8 +75,6 @@ private:
     GLuint aTextureCoordHandle_mediacodec;
     GLuint uTextureSamplerHandle_mediacodec;
 
-    std::function<void()> mReadyCallBack;
-
     //egl
     EGLConfig eglConf;
     EGLSurface eglSurface;
@@ -93,13 +91,11 @@ private:
     int renderType;
 
 public:
-    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType, std::function<void()> callBack);
+    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType);
 
     ~SDLVideo();
 
     void drawYUV(int w, int h, void *y, void *u, void *v);
-
-    void onFrameAvailable();
 
     void drawMediaCodec();
 

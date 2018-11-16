@@ -11,9 +11,7 @@
 #include <android/native_window.h>
 #include <unistd.h>
 
-SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType,
-                   std::function<void()> callBack) {
-    mReadyCallBack = callBack;
+SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
     this->renderType = renderType;
     //jni-----------------------------------------------------------------------------------
     this->vm = vm;
@@ -53,7 +51,7 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
     //create surface
     eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
 
-    //create contex
+    //create context
     const EGLint ctxAttr[] = {
             EGL_CONTEXT_CLIENT_VERSION, 2,
             EGL_NONE
@@ -166,13 +164,8 @@ jobject SDLVideo::getMediaCodecSurface(JNIEnv *jniEnv) {
     return jniEnv->CallObjectMethod(mediaCodecSurface, jmid);
 }
 
-void SDLVideo::onFrameAvailable() {
-    if (mReadyCallBack != NULL) {
-        mReadyCallBack();
-    }
-}
-
 void SDLVideo::drawMediaCodec() {
+    eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
 
     int width = ANativeWindow_getWidth(nativeWindow);
     int height = ANativeWindow_getHeight(nativeWindow);

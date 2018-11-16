@@ -3,6 +3,7 @@ package com.syiyi.player;
 import android.annotation.SuppressLint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
@@ -34,8 +35,7 @@ public class MainActivity extends AppCompatActivity {
         tv_buffer_time = findViewById(R.id.tv_buffer_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
-        mPlayer.setSoftOnly(false);
-        mPlayer.setSurface(mVideoView.getHolder().getSurface());
+        mPlayer.setSoftOnly(true);
 //        mPlayer.setDataSource("/sdcard/test.mp4");
         mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
         mPlayer.setOnPlayTimeListener(new OnPlayTimeListener() {
@@ -92,6 +92,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void play(View view) {
+        SurfaceHolder holder = mVideoView.getHolder();
+        holder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                mPlayer.setSurface(holder.getSurface());
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                mPlayer.setSurface(null);
+            }
+        });
+        mPlayer.setSurface(holder.getSurface());
         mPlayer.prepareAsync(new OnPrepareListener() {
             @Override
             public void onPrepared() {

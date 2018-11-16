@@ -28,15 +28,12 @@ void VideoRender::play() {
 
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
+    //todo 后台纹理会被销毁或重建，需要重新设置surface 并重新初始化egl,注意先销毁egl
     if (!isHand) {
-        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL,
-                                 [this] {
-                                     this->onTextureReady();
-                                 });
+        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_OPEN_GL);
         renderOpenGL();
     } else {
-        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC,
-                                 [] {});
+        mSDLVideo = new SDLVideo(get_jni_jvm(), mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC);
         //唤醒hardDecoder getSurface
         pthread_mutex_lock(&mGetSurfaseMutex);
         inited = 1;
