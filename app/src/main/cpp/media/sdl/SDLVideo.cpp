@@ -184,6 +184,8 @@ void SDLVideo::drawMediaCodec() {
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, mediaCodecTextureId);
     glUniform1i(uTextureSamplerHandle_mediacodec, 0);
 
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
     eglSwapBuffers(eglDisp, eglSurface);
 }
 
@@ -191,6 +193,9 @@ void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
     int width = ANativeWindow_getWidth(nativeWindow);
     int height = ANativeWindow_getHeight(nativeWindow);
     glViewport(0, 0, width, height);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0, 0, 0, 1);
 
     //使 GL_TEXTURE0 单元 活跃 opengl最多支持16个纹理
     //纹理单元是显卡中所有的可用于在shader中进行纹理采样的显存 数量与显卡类型相关，至少16个
@@ -210,12 +215,6 @@ void SDLVideo::drawYUV(int w, int h, void *y, void *u, void *v) {
     glBindTexture(GL_TEXTURE_2D, vTextureId);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, w / 2, h / 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
                  v);
-
-
-    /***
-     * 纹理更新完成后开始绘制
-     ***/
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
