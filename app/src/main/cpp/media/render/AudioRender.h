@@ -6,6 +6,7 @@
 
 #include "../global/Status.h"
 #include "../queue/FrameQueue.h"
+#include "../sdl/SDLAudio.h"
 #include <unistd.h>
 #include <assert.h>
 #include <thread>
@@ -28,33 +29,17 @@ private:
     MediaPlayer *mPlayer = NULL;
     AVRational mTimebase;
 
-    int mSampleRate = 0;
     uint8_t *mOutBuffer = NULL;
     int mOutSize = 0;
+
     int64_t duration;
     FrameQueue *mQueue = NULL;
     int mMaxQueueSize = 4;
     int mOutChannelNum;
     SwrContext *mSwrCtx = NULL;
     std::thread *mPlayThread = NULL;
-    // 引擎接口
-    SLObjectItf mEngineObj = NULL;
-    SLEngineItf mEngineIF = NULL;
 
-    //混音器
-    SLObjectItf mMixObj = NULL;
-    SLEnvironmentalReverbItf mMixEnvReverbIF = NULL;
-    SLEnvironmentalReverbSettings mReverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
-
-    //pcm player
-    SLObjectItf mPlayerObj = NULL;
-    SLPlayItf mPlayerIF = NULL;
-    //voice
-    SLVolumeItf mVolumeIF = NULL;
-
-    //缓冲器队列接口
-    SLAndroidSimpleBufferQueueItf mBufferQueue = NULL;
-
+    SDLAudio *mAudio;
 
     void createPlayer();
 
