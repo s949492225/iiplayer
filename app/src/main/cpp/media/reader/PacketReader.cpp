@@ -316,6 +316,4 @@ void PacketReader::seek(int sec) {
 
 void PacketReader::notifyWait() {
     pthread_cond_broadcast(&mPlayer->getHolder()->mReadCond);
-    mPlayer->getAudioDecoder()->notifyWait();
-    mPlayer->getVideoDecoder()->notifyWait();
 }
