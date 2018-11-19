@@ -21,7 +21,12 @@ PacketReader::PacketReader(MediaPlayer *player) {
 
 PacketReader::~PacketReader() {
     if (mReadThread) {
-        mReadThread->join();
+        try {
+            mReadThread->join();
+        } catch (std::exception &exception) {
+            //ignore
+        }
+
         mReadThread = NULL;
         pthread_mutex_destroy(&mReadMutex);
     }

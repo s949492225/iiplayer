@@ -7,7 +7,8 @@
 
 BaseDecoder::BaseDecoder(MediaPlayer *player) {
     mPlayer = player;
-    mQueue = new PacketQueue(mPlayer->getStatus(), mPlayer->getHolder(), const_cast<char *>("video"));
+    mQueue = new PacketQueue(mPlayer->getStatus(), mPlayer->getHolder(),
+                             const_cast<char *>("video"));
 }
 
 void BaseDecoder::start() {
@@ -34,7 +35,12 @@ int BaseDecoder::getQueueSize() {
 
 BaseDecoder::~BaseDecoder() {
     if (mDecodeThread != NULL) {
-        mDecodeThread->join();
+        try {
+            mDecodeThread->join();
+        }
+        catch (std::exception &exception) {
+            //ignore
+        }
         mDecodeThread = NULL;
     }
     mPlayer = NULL;

@@ -174,7 +174,7 @@ void CallJava::release(bool isMain) {
     }
     jniEnv->CallVoidMethod(mObj, mJmidReleaseMediaCodec);
 
-    mEnv->DeleteGlobalRef(mObj);
+    jniEnv->DeleteGlobalRef(mObj);
     if (!isMain) {
         mVm->DetachCurrentThread();
     }

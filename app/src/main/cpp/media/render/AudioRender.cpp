@@ -130,7 +130,11 @@ void AudioRender::resume() {
 
 AudioRender::~AudioRender() {
     if (mPlayThread != NULL) {
-        mPlayThread->join();
+        try {
+            mPlayThread->join();
+        } catch (std::exception &exception) {
+            //ignore
+        }
         mPlayThread = NULL;
     }
 

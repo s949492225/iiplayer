@@ -29,10 +29,10 @@ void VideoRender::play() {
 void VideoRender::playThread() {
     LOGD("视频播放线程开始,tid:%i\n", gettid());
     if (!isHand) {
-        mSDLVideo = new SDLVideo( mPlayer->getWindow(), RENDER_TYPE_OPEN_GL);
+        mSDLVideo = new SDLVideo(mPlayer->getWindow(), RENDER_TYPE_OPEN_GL);
         renderOpenGL();
     } else {
-        mSDLVideo = new SDLVideo( mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC);
+        mSDLVideo = new SDLVideo(mPlayer->getWindow(), RENDER_TYPE_MEDIA_CODEC);
         //唤醒hardDecoder getSurface
         pthread_mutex_lock(&mGetSurfaseMutex);
         inited = 1;
@@ -199,8 +199,11 @@ VideoRender::~VideoRender() {
 
         pthread_cond_broadcast(&mRenderCond);
         pthread_cond_broadcast(&mGetSurfaceCond);
-
-        mPlayThread->join();
+        try {
+            mPlayThread->join();
+        } catch (std::exception &exception) {
+            //ignore
+        }
         mPlayThread = NULL;
 
         pthread_mutex_destroy(&mRenderMutex);
