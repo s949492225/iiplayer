@@ -19,7 +19,6 @@ extern "C" {
 #include <libswresample/swresample.h>
 
 };
-#define SAMPLE_SIZE 44100*4
 
 class MediaPlayer;
 
@@ -40,6 +39,8 @@ private:
     std::thread *mPlayThread = NULL;
 
     SDLAudio *mAudio;
+
+    int mySampleRate = 0;
 
     void createPlayer();
 

@@ -6,7 +6,7 @@
 #include "../../android/android_log.h"
 
 SDLAudio::SDLAudio(int sampleRate) {
-    mSampleRate = sampleRate;
+    mySampleRate = sampleRate;
 }
 
 void SDLAudio::create(slAndroidSimpleBufferQueueCallback callback, void *host) {
@@ -61,11 +61,10 @@ void SDLAudio::create(slAndroidSimpleBufferQueueCallback callback, void *host) {
     // 第三步，配置PCM格式信息
     SLDataLocator_AndroidSimpleBufferQueue android_queue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
                                                             2};
-
     SLDataFormat_PCM pcm = {
             SL_DATAFORMAT_PCM,//播放pcm格式的数据
             2,//2个声道（立体声）
-            static_cast<SLuint32>(mSampleRate * 1000),//44100hz的频率
+            static_cast<SLuint32>(mySampleRate * 1000),
             SL_PCMSAMPLEFORMAT_FIXED_16,//位数 16位
             SL_PCMSAMPLEFORMAT_FIXED_16,//和位数一致就行
             SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,//立体声（前左前右）
@@ -151,7 +150,7 @@ SDLAudio::~SDLAudio() {
     }
 }
 
-void SDLAudio::renderVoice(void *buffer,SLuint32 bufferSize) {
+void SDLAudio::renderVoice(void *buffer, SLuint32 bufferSize) {
     SLresult result = (*mBufferQueue)->Enqueue(mBufferQueue,
                                                buffer,
                                                bufferSize);

@@ -7,8 +7,9 @@
 
 AudioRender::AudioRender(MediaPlayer *player) {
     mPlayer = player;
-    mOutBuffer = (uint8_t *) (av_malloc((size_t) (SAMPLE_SIZE)));
-    mAudio = new SDLAudio(mPlayer->getHolder()->mAudioCodecCtx->sample_rate);
+    mySampleRate = player->getHolder()->mAudioCodecCtx->sample_rate;
+    mOutBuffer = (uint8_t *) (av_malloc((size_t) (mySampleRate * 2 * 2)));
+    mAudio = new SDLAudio(mySampleRate);
     duration = mPlayer->getHolder()->mFormatCtx->duration;
     mTimebase = mPlayer->getHolder()->getAudioTimeBase();
     mQueue = new FrameQueue(mPlayer->getStatus(), const_cast<char *>("audio"));
@@ -66,8 +67,11 @@ int AudioRender::getPcmData() {
                 frame->channels = av_get_channel_layout_nb_channels(frame->channel_layout);
             }
 
-            int nb = swr_convert(mSwrCtx, &mOutBuffer, SAMPLE_SIZE,
-                                 (const uint8_t **) frame->data, frame->nb_samples);
+            int nb = swr_convert(mSwrCtx,
+                                 &mOutBuffer,
+                                 frame->nb_samples,
+                                 (const uint8_t **) frame->data,
+                                 frame->nb_samples);
 
             mOutSize = nb * mOutChannelNum * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
             mPlayer->setClock(frame->pts * av_q2d(mTimebase));
@@ -85,7 +89,8 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
         int bufferSize = render.getPcmData();
         if (bufferSize > 0) {
             render.mPlayer->setClock(
-                    render.mPlayer->getClock() + bufferSize / ((double) SAMPLE_SIZE));
+                    render.mPlayer->getClock() +
+                    bufferSize / ((double) render.mySampleRate * 2 * 2));
             double diff = render.mPlayer->getClock() - render.mPlayer->getDuration();
             if (diff > -0.05 && diff < 10 && render.mQueue->getQueueSize() == 0) {
                 render.mPlayer->getStatus()->isPlayEnd = true;
@@ -93,7 +98,7 @@ void renderAudioCallBack(SLAndroidSimpleBufferQueueItf  __unused queue, void *da
             render.mPlayer->sendMsg(false, DATA_NOW_PLAYING_TIME, (int) render.mPlayer->getClock());
 
             if (render.mAudio != NULL) {
-                render.mAudio->renderVoice(render.mOutBuffer,static_cast<SLuint32>(bufferSize));
+                render.mAudio->renderVoice(render.mOutBuffer, static_cast<SLuint32>(bufferSize));
             }
 
             if (render.mPlayer->getStatus()->isPlayEnd) {

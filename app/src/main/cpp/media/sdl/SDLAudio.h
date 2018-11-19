@@ -31,7 +31,8 @@ private:
 
     //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf mBufferQueue = NULL;
-    int mSampleRate = 0;
+
+    int mySampleRate = 0;
 public:
     SDLAudio(int sampleRate);
 
