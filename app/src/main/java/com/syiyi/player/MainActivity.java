@@ -35,8 +35,7 @@ public class MainActivity extends AppCompatActivity {
         tv_buffer_time = findViewById(R.id.tv_buffer_time);
         seekBar = findViewById(R.id.seekbar);
         mPlayer = new IIMediaPlayer();
-        mPlayer.setSoftOnly(true);
-//        mPlayer.setDataSource("/sdcard/test.mp4");
+        mPlayer.setSoftOnly(false);
         mPlayer.setDataSource("http://220.194.236.214/2/v/x/k/w/vxkwfozzamnhdwuiekdoukkvphikem/hd.yinyuetai.com/5AC80165F11A32EBBFD53F24DCDDA90D.mp4?sc=5ea95dc33763e01b");
         mPlayer.setOnPlayTimeListener(new OnPlayTimeListener() {
             @Override
@@ -96,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         holder.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-                mPlayer.setSurface(holder.getSurface());
+                mPlayer.onSurfaceCreate(holder.getSurface());
             }
 
             @Override
@@ -105,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                mPlayer.setSurface(null);
+                mPlayer.onSurfaceDestory();
             }
         });
         mPlayer.setSurface(holder.getSurface());

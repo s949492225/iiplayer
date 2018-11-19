@@ -15,6 +15,8 @@ public:
     bool isLoad = false;
     bool isPlayEnd = false;
     bool isEOF = false;
+    bool hasSurfaceDestoryed = false;
+    bool isSurfaceAvali = false;
     int mSeekSec = 0;
     int mStep = 0;
 };

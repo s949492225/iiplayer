@@ -10,9 +10,7 @@
 MediaPlayer::MediaPlayer(JavaVM *pVM, JNIEnv *pEnv, jobject obj) {
     mHolder = new LifeSequenceHolder();
     mCallJava = new CallJava(pVM, pEnv, obj);
-    jobject surface = mCallJava->getSurface(true);
-    mNativeWindow = ANativeWindow_fromSurface(pEnv, surface);
-    pEnv->DeleteLocalRef(surface);
+    createNativeWindow(pEnv);
 }
 
 void MediaPlayer::open(const char *url) {
@@ -251,6 +249,23 @@ double MediaPlayer::getClock() {
 
 ANativeWindow *MediaPlayer::getWindow() {
     return mNativeWindow;
+}
+
+void MediaPlayer::onSuraceAvali(bool isOk) {
+    if (getStatus() != NULL && !getStatus()->isExit) {
+        if (!isOk) {
+            getStatus()->hasSurfaceDestoryed = true;
+            getStatus()->isSurfaceAvali = false;
+        } else {
+            getStatus()->isSurfaceAvali = true;
+        }
+    }
+}
+
+void MediaPlayer::createNativeWindow(JNIEnv *env) {
+    jobject surface = mCallJava->getSurface(true);
+    mNativeWindow = ANativeWindow_fromSurface(env, surface);
+    env->DeleteLocalRef(surface);
 }
 
 

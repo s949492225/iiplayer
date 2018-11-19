@@ -58,6 +58,8 @@ public:
 
     void sendMsg(bool isMain, int type, int data);
 
+    void onSuraceAvali(bool isOk);
+
     Status *getStatus();
 
 public:
@@ -106,5 +108,7 @@ public:
     double getClock();
 
     ANativeWindow *getWindow();
+
+    void createNativeWindow(JNIEnv *env);
 
 };

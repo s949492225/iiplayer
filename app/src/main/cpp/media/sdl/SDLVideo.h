@@ -81,7 +81,6 @@ private:
     EGLContext eglCtx;
     EGLDisplay eglDisp;
     //jni
-    JavaVM *vm;
     JNIEnv *env;
     ANativeWindow *nativeWindow;
     jobject mediaCodecSurface;
@@ -91,7 +90,7 @@ private:
     int renderType;
 
 public:
-    SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType);
+    SDLVideo(ANativeWindow *window, int renderType);
 
     ~SDLVideo();
 
@@ -101,8 +100,10 @@ public:
 
     jobject getMediaCodecSurface(JNIEnv *jniEnv);
 
+    void resetEGL(ANativeWindow *nativeWindow);
+
 private:
-    void initEGL(ANativeWindow *nativeWindow);
+    void initEGL();
 
     void initYuvShader();
 
@@ -112,6 +113,7 @@ private:
 
 
     void gl_log_check(const char *tag);
+
 };
 
 

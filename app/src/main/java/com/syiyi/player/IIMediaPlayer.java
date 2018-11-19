@@ -180,6 +180,15 @@ public class IIMediaPlayer {
         nativeSeek(sec);
     }
 
+    public void onSurfaceCreate(Surface surface) {
+        mSurface = surface;
+        nativeOnSufaceAvail(true);
+    }
+
+    public void onSurfaceDestory() {
+        nativeOnSufaceAvail(false);
+    }
+
     protected void onError(int code) {
         if (mErrorListener != null) {
             mErrorListener.onError(code);
@@ -216,6 +225,8 @@ public class IIMediaPlayer {
     private native void nativeResume();
 
     private native void nativeStop();
+
+    private native void nativeOnSufaceAvail(boolean isOk);
 
     private native String nativeGetInfo(String name);
 

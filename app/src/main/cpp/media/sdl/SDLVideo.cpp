@@ -11,18 +11,12 @@
 #include <android/native_window.h>
 #include <unistd.h>
 
-SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
+SDLVideo::SDLVideo(ANativeWindow *window, int renderType) {
     this->renderType = renderType;
-    //jni-----------------------------------------------------------------------------------
-    this->vm = vm;
-    if (this->vm->AttachCurrentThread(&env, 0) != JNI_OK) {
-        LOGE("SDLVideo AttachCurrentThread ERROR ")
-        return;
-    }
     //get window
     nativeWindow = window;
     //egl-----------------------------------------------------------------------------------
-    initEGL(nativeWindow);
+    initEGL();
     //opengl
     if (this->renderType == RENDER_TYPE_OPEN_GL) {
         initYuvShader();
@@ -32,7 +26,7 @@ SDLVideo::SDLVideo(JavaVM *vm, ANativeWindow *window, int renderType) {
 
 }
 
-void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
+void SDLVideo::initEGL() {
     //get display
     eglDisp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     //init
@@ -48,17 +42,45 @@ void SDLVideo::initEGL(ANativeWindow *nativeWindow) {
 
     eglChooseConfig(eglDisp, configSpec, &eglConf, 1, &numConfigs);
 
+    const EGLint surfaceAttrs[] =
+            {
+                    EGL_RENDER_BUFFER,
+                    EGL_BACK_BUFFER,
+                    EGL_NONE
+            };
+
     //create surface
-    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, NULL);
+    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, nativeWindow, surfaceAttrs);
 
     //create context
     const EGLint ctxAttr[] = {
-            EGL_CONTEXT_CLIENT_VERSION, 2,
+            EGL_CONTEXT_CLIENT_VERSION,
+            2,
             EGL_NONE
     };
     eglCtx = eglCreateContext(eglDisp, eglConf, EGL_NO_CONTEXT, ctxAttr);
     //绑定到当前线程
     eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx);
+}
+
+void SDLVideo::resetEGL(ANativeWindow *window) {
+    nativeWindow = window;
+    if (eglSurface != EGL_NO_SURFACE) {
+        eglDestroySurface(eglDisp, eglSurface);
+    }
+
+    const EGLint surfaceAttrs[] =
+            {
+                    EGL_RENDER_BUFFER,
+                    EGL_BACK_BUFFER,
+                    EGL_NONE
+            };
+
+    eglSurface = eglCreateWindowSurface(eglDisp, eglConf, window, surfaceAttrs);
+
+    if (!eglMakeCurrent(eglDisp, eglSurface, eglSurface, eglCtx)) {
+        LOGE("ResetSurface failed EGL unable to eglMakeCurrent");
+    }
 }
 
 
@@ -145,16 +167,19 @@ void SDLVideo::gl_log_check(const char *msg) {
 }
 
 void SDLVideo::createMediaSurface(GLuint textureId) {
+    if (get_jni_jvm()->AttachCurrentThread(&env, 0) != JNI_OK) {
+        LOGE("SDLVideo AttachCurrentThread ERROR ")
+        return;
+    }
     jclass jcls = get_mediacodec_surface();
-
     updateTextureJmid = env->GetMethodID(jcls, "update", "()V");
     releaseJmid = env->GetMethodID(jcls, "release", "()V");
 
-    jmethodID jmid = env->GetMethodID(jcls, "<init>", "(IJ)V");
+    jmethodID jmid = env->GetMethodID(jcls, "<init>", "(I)V");
     jobject obj = env->NewObject(jcls, jmid, textureId, this);
     mediaCodecSurface = env->NewGlobalRef(obj);
     env->DeleteLocalRef(obj);
-
+    get_jni_jvm()->DetachCurrentThread();
     usleep(20 * 1000);
 }
 
@@ -177,8 +202,14 @@ void SDLVideo::drawMediaCodec() {
 
     glUseProgram(mediaCodecProgramId);
 
-    env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+    JNIEnv *env;
 
+    if (get_jni_jvm()->AttachCurrentThread(&env, 0) != JNI_OK) {
+        LOGE("SDLVideo AttachCurrentThread ERROR ")
+        return;
+    }
+    env->CallVoidMethod(mediaCodecSurface, updateTextureJmid);
+    get_jni_jvm()->DetachCurrentThread();
 
     glEnableVertexAttribArray(aPositionHandle_mediacodec);
     glVertexAttribPointer(aPositionHandle_mediacodec, 3, GL_FLOAT, GL_FALSE,
@@ -247,10 +278,19 @@ SDLVideo::~SDLVideo() {
 
     //release jni
     if (renderType == RENDER_TYPE_MEDIA_CODEC) {
+
+
+        if (get_jni_jvm()->AttachCurrentThread(&env, 0) != JNI_OK) {
+            LOGE("SDLVideo AttachCurrentThread ERROR ")
+            return;
+        }
+
         env->CallVoidMethod(mediaCodecSurface, releaseJmid);
         env->DeleteGlobalRef(mediaCodecSurface);
+        get_jni_jvm()->DetachCurrentThread();
+
+        get_jni_jvm()->DetachCurrentThread();
     }
-    vm->DetachCurrentThread();
 }
 
 

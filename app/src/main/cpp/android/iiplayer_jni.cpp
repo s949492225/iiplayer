@@ -1,4 +1,5 @@
 #include <stdint.h>//
+#include <android/native_window_jni.h>
 // Created by 宋林涛 on 2018/10/22.
 //
 
@@ -110,17 +111,28 @@ static jstring JNICALL nativeGetInfo(JNIEnv *env, jobject obj, jstring name) {
     }
 }
 
+static void JNICALL nativeOnSufaceAvail(JNIEnv *env, jobject obj, bool isOk) {
+    MediaPlayer *player = get_media_player(env, obj);
+    if (player != NULL) {
+        if (isOk) {
+            player->createNativeWindow(env);
+        }
+        player->onSuraceAvali(isOk);
+    }
+}
+
 //++ jni register ++//
 static JavaVM *g_jvm = NULL;
 static jclass jcls_mediac_codec_surface = NULL;
 static const JNINativeMethod g_methods[] = {
-        {"nativeOpen",    "(Ljava/lang/String;)V",                  (void *) nativeOpen},
-        {"nativePlay",    "()V",                                    (void *) nativePlay},
-        {"nativePause",   "()V",                                    (void *) nativePause},
-        {"nativeResume",  "()V",                                    (void *) nativeResume},
-        {"nativeSeek",    "(I)V",                                   (void *) nativeSeek},
-        {"nativeStop",    "()V",                                    (void *) nativeStop},
-        {"nativeGetInfo", "(Ljava/lang/String;)Ljava/lang/String;", (void *) nativeGetInfo}
+        {"nativeOpen",          "(Ljava/lang/String;)V",                  (void *) nativeOpen},
+        {"nativePlay",          "()V",                                    (void *) nativePlay},
+        {"nativePause",         "()V",                                    (void *) nativePause},
+        {"nativeResume",        "()V",                                    (void *) nativeResume},
+        {"nativeSeek",          "(I)V",                                   (void *) nativeSeek},
+        {"nativeStop",          "()V",                                    (void *) nativeStop},
+        {"nativeGetInfo",       "(Ljava/lang/String;)Ljava/lang/String;", (void *) nativeGetInfo},
+        {"nativeOnSufaceAvail", "(Z)V",                                   (void *) nativeOnSufaceAvail}
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void __unused *reserved) {
