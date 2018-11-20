@@ -166,9 +166,10 @@ void MediaPlayer::release(bool isMain) {
         ANativeWindow_release(mNativeWindow);
         mNativeWindow = NULL;
     }
-
-    mCallJava->release(isMain);
-    ii_deletep(&mCallJava);
+    if (mCallJava!=NULL) {
+        mCallJava->release(isMain);
+        ii_deletep(&mCallJava);
+    }
 
     if (LOG_DEBUG) {
         LOGD("player 资源释放完成");
