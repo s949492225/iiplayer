@@ -29,7 +29,7 @@ private:
     LifeSequenceHolder *mHolder = NULL;
     Status *mStatus = NULL;
     PacketReader *mReader = NULL;
-    ANativeWindow *mNativeWindow;
+    ANativeWindow *mNativeWindow = NULL;
     BaseDecoder *mAudioDecoder = NULL;
     BaseDecoder *mVideoDecoder = NULL;
     AudioRender *mAudioRender = NULL;
