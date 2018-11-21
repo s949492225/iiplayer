@@ -37,12 +37,10 @@ extern "C" {
 int get_codec_context(AVCodecParameters *codecParam, AVCodecContext **avCodecContext);
 
 template<typename T>
-char *to_char_str(T from) {
-    std::stringstream ss;
-    std::string str;
-    ss << from;
-    ss >> str;
-    return const_cast<char *>(str.c_str());
+std::string to_string(T from) {
+    std::ostringstream stream;
+    stream << from;
+    return stream.str();
 }
 
 

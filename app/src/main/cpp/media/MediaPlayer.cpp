@@ -106,15 +106,15 @@ CallJava *MediaPlayer::getCallJava() {
 
 jstring MediaPlayer::getInfo(char *name) {
     if (strcmp("duration", name) == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mDuration));
+        return get_jni_env()->NewStringUTF(to_string(mDuration).c_str());
     } else if (strcmp(name, "rotation") == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mRotation));
+        return get_jni_env()->NewStringUTF(to_string(mRotation).c_str());
     } else if (strcmp(name, "width") == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mWidth));
+        return get_jni_env()->NewStringUTF(to_string(mWidth).c_str());
     } else if (strcmp(name, "height") == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mHeight));
+        return get_jni_env()->NewStringUTF(to_string(mHeight).c_str());
     } else if (strcmp(name, "played_time") == 0) {
-        return get_jni_env()->NewStringUTF(to_char_str(mClock));
+        return get_jni_env()->NewStringUTF(to_string(mClock).c_str());
     }
     return get_jni_env()->NewStringUTF("0");;
 }
@@ -166,7 +166,7 @@ void MediaPlayer::release(bool isMain) {
         ANativeWindow_release(mNativeWindow);
         mNativeWindow = NULL;
     }
-    if (mCallJava!=NULL) {
+    if (mCallJava != NULL) {
         mCallJava->release(isMain);
         ii_deletep(&mCallJava);
     }
