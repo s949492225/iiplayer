@@ -41,6 +41,10 @@ BaseDecoder::~BaseDecoder() {
         catch (std::exception &exception) {
             //ignore
         }
+        if (mQueue!=NULL) {
+            delete mQueue;
+            mQueue=NULL;
+        }
         mDecodeThread = NULL;
     }
     mPlayer = NULL;
