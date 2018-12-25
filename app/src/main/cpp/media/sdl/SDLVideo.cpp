@@ -288,8 +288,6 @@ SDLVideo::~SDLVideo() {
         env->CallVoidMethod(mediaCodecSurface, releaseJmid);
         env->DeleteGlobalRef(mediaCodecSurface);
         get_jni_jvm()->DetachCurrentThread();
-
-        get_jni_jvm()->DetachCurrentThread();
     }
 }
 
